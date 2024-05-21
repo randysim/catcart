@@ -8,6 +8,7 @@ Tasks
 - [ ] Keep track of kinetic and potential energy to adjust for speed of the cart
 - [ ] Calculate centripetal force when it goes over the "circle" part of the hill.
 - [ ] Create a case where the cat can "fly" out of the cart.
+- [ ] simulate kinematics
 - [ ] Create an ending zone
 - [ ] Create a win screen and buttons to replay
 - [ ] Create settings to change for the hill, weight of cat, etc.

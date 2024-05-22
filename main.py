@@ -54,3 +54,14 @@ bottom = hill_points[0].y
 cart_path = [starting_position, vec(hill_points[0].x-0.5, bottom, 0)] + hill_points + [ vec(hill_points[len(hill_points)-1].x+0.5, bottom, 0) ]
 
 curve(pos=cart_path)
+
+# SIMULATION
+# weight in kg
+cart_weight = 10
+cat_weight = 1
+
+cart = box(pos=cart_path[0], length=0.3, width = 0.2, height=0.2)
+
+dt = 0.01
+for i in range(len(cart_path)-1):
+    rate(1/dt)

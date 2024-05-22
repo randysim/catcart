@@ -4,8 +4,8 @@ def generate_hill_points(percent_semi_circle, semi_radius, y_coord, x_coord, hil
     c_points = []
     circle_range = sqrt(semi_radius) * percent_semi_circle # how much to the left and right to draw the "circle"
     c1_start = x_coord-(semi_radius+circle_range) # start of the first curve
-    c_start = x_coord-(semi_radius)# start of drawing the circle
-    c2_start = x_coord+semi_radius # start of drawing the 2nd curve
+    c_start = x_coord-(circle_range)# start of drawing the circle
+    c2_start = x_coord+circle_range # start of drawing the 2nd curve
     
     hill_width = (semi_radius+circle_range)-c1_start
     for i in range(num_points):
@@ -39,11 +39,11 @@ def generate_hill_points(percent_semi_circle, semi_radius, y_coord, x_coord, hil
     return c_points
 
 hill_points = generate_hill_points(
-    percent_semi_circle=0.9, 
+    percent_semi_circle=0.95, 
     semi_radius=1, 
     y_coord=0, 
     x_coord=0, 
-    hill_height=1, 
+    hill_height=2, 
     num_points=1000
 )
 print(hill_points)

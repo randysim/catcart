@@ -44,7 +44,7 @@ hill_points = generate_hill_points(
     y_coord=0, 
     x_coord=0, 
     hill_height=2, 
-    num_points=1000
+    num_points=150
 )
 print(hill_points)
 curve(pos=hill_points)

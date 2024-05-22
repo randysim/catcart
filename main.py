@@ -8,6 +8,7 @@ def generate_hill_points(percent_semi_circle, semi_radius, y_coord, x_coord, hil
     c2_start = x_coord+circle_range # start of drawing the 2nd curve
     
     hill_width = (semi_radius+circle_range)-c1_start
+    
     for i in range(num_points):
         percent_done = i/num_points # percent done with drawing
         cx = c1_start + (hill_width*percent_done) # current x coordinate
@@ -36,15 +37,20 @@ def generate_hill_points(percent_semi_circle, semi_radius, y_coord, x_coord, hil
                     0
                 )
             )
-    return c_points
+    return (c_points, {'x': x_coord, 'y': y_coord}, { 'start': c_start, 'end': c2_start })
 
-hill_points = generate_hill_points(
-    percent_semi_circle=0.95, 
+initial_height = 1
+starting_position = vec(-3.5, initial_height, 0)
+
+hill_points, circle_center, circle_range = generate_hill_points(
+    percent_semi_circle=0.96, 
     semi_radius=1, 
     y_coord=0, 
     x_coord=0, 
     hill_height=2, 
     num_points=150
 )
-print(hill_points)
-curve(pos=hill_points)
+bottom = hill_points[0].y
+cart_path = [starting_position, vec(hill_points[0].x-0.5, bottom, 0)] + hill_points + [ vec(hill_points[len(hill_points)-1].x+0.5, bottom, 0) ]
+
+curve(pos=cart_path)

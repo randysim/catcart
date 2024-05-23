@@ -48,7 +48,7 @@ hill_points, circle_center, circle_range = generate_hill_points(
     y_coord=0, 
     x_coord=0, 
     hill_height=2, 
-    num_points=150
+    num_points=10
 )
 bottom = hill_points[0].y
 cart_path = [starting_position, vec(hill_points[0].x-0.5, bottom, 0)] + hill_points + [ vec(hill_points[len(hill_points)-1].x+0.5, bottom, 0) ]
@@ -63,5 +63,35 @@ cat_weight = 1
 cart = box(pos=cart_path[0], length=0.3, width = 0.2, height=0.2)
 
 dt = 0.01
+g = 9.81
+
+# animation loop
+# interpolate between points based on velocity calculated from KE
+
+current_angle = 0
+kinetic_energy = 10
+
 for i in range(len(cart_path)-1):
-    rate(1/dt)
+    p1 = cart_path[i] # each point is a vector (xyz)
+    p2 = cart_path[i+1]
+    going_down = False
+    if p1.y > p2.y:
+        going_down = True
+    
+    y_dist = abs(p2.y-p1.y)
+    x_dist = abs(p2.x-p1.x)
+    
+    angle = atan(y_dist/x_dist)
+    if going_down:
+        angle *= -1
+    change = angle-current_angle
+    
+    cart.rotate(axis=vec(0, 0, 1), angle=change, origin=cart.pos)
+    current_angle = angle
+    
+    while cart.pos.x < p2.x:
+        rate(1/dt)
+        velocity = sqrt((2 * abs(kinetic_energy))/cart_weight)
+        cart.pos = cart.pos + (p2-p1) * velocity * dt
+        kinetic_energy = g * cart_weight * (initial_height - cart.pos.y)
+    cart.pos = p2

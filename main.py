@@ -39,7 +39,7 @@ def generate_hill_points(percent_semi_circle, semi_radius, y_coord, x_coord, hil
             )
     return (c_points, {'x': x_coord, 'y': y_coord}, { 'start': c_start, 'end': c2_start })
 
-initial_height = 1
+initial_height = 1.5
 starting_position = vec(-3.5, initial_height, 0)
 
 hill_points, circle_center, circle_range = generate_hill_points(
@@ -63,6 +63,7 @@ curve(pos=cart_path)
 # weight in kg
 cart_weight = 10
 cat_weight = 1
+total_weight = cart_weight + cat_weight
 
 cart = box(pos=cart_path[0], length=0.3, width = 0.2, height=0.2)
 
@@ -98,9 +99,9 @@ for i in range(len(cart_path)-1):
     
     while cart.pos.x < p2.x:
         rate(1/dt)
-        velocity = sqrt((2 * abs(kinetic_energy))/cart_weight)
+        velocity = sqrt((2 * abs(kinetic_energy))/total_weight)
         cart.pos = cart.pos + (p2-p1) * velocity * dt * percent_travel
-        kinetic_energy = g * cart_weight * (initial_height - cart.pos.y)
+        kinetic_energy = g * total_weight * (initial_height - cart.pos.y)
     cart.pos = p2
     
     

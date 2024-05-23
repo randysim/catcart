@@ -65,7 +65,23 @@ cart_weight = 10
 cat_weight = 1
 total_weight = cart_weight + cat_weight
 
-cart = box(pos=cart_path[0], length=0.3, width = 0.2, height=0.2)
+cat = box(
+    pos=(cart_path[0]+vec(0,0.1,0)), 
+    length=0.15, 
+    width=0.2, 
+    height=0.3, 
+    color=color.orange
+)
+cart = box(
+    pos=cart_path[0], 
+    length=0.3, 
+    width = 0.2, 
+    height=0.2,
+    color=color.green
+)
+cartcat = compound(
+    [cat, cart]
+)
 
 dt = 0.01
 dx=0.5
@@ -92,17 +108,17 @@ for i in range(len(cart_path)-1):
         angle *= -1
     change = angle-current_angle
     
-    cart.rotate(axis=vec(0, 0, 1), angle=change, origin=cart.pos)
+    cartcat.rotate(axis=vec(0, 0, 1), angle=change, origin=cartcat.pos)
     current_angle = angle
     
     percent_travel = dx/mag(p2-p1) 
     
-    while cart.pos.x < p2.x:
+    while cartcat.pos.x < p2.x:
         rate(1/dt)
         velocity = sqrt((2 * abs(kinetic_energy))/total_weight)
-        cart.pos = cart.pos + (p2-p1) * velocity * dt * percent_travel
-        kinetic_energy = g * total_weight * (initial_height - cart.pos.y)
-    cart.pos = p2
+        cartcat.pos = cartcat.pos + (p2-p1) * velocity * dt * percent_travel
+        kinetic_energy = g * total_weight * (initial_height - cartcat.pos.y)
+    cartcat.pos = p2 # after finishing traveling path, just set the position to last point to be safe
     
     
     

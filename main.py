@@ -66,10 +66,10 @@ cat_weight = 1
 total_weight = cart_weight + cat_weight
 
 cat = box(
-    pos=(cart_path[0]+vec(0,0.1,0)), 
+    pos=(cart_path[0]+vec(0,0.05,0)), 
     length=0.15, 
     width=0.2, 
-    height=0.3, 
+    height=0.25, 
     color=color.orange
 )
 cart = box(

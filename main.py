@@ -1,6 +1,8 @@
 Web VPython 3.2
 
-def generate_hill_points(percent_semi_circle, semi_radius, y_coord, x_coord, hill_height, num_points):
+point_every_x = 0.2
+
+def generate_hill_points(percent_semi_circle, semi_radius, y_coord, x_coord, hill_height):
     c_points = []
     circle_range = sqrt(semi_radius) * percent_semi_circle # how much to the left and right to draw the "circle"
     c1_start = x_coord-(semi_radius+circle_range) # start of the first curve
@@ -8,6 +10,7 @@ def generate_hill_points(percent_semi_circle, semi_radius, y_coord, x_coord, hil
     c2_start = x_coord+circle_range # start of drawing the 2nd curve
     
     hill_width = (semi_radius+circle_range)-c1_start
+    num_points = (hill_width/point_every_x)+1
     
     for i in range(num_points):
         percent_done = i/num_points # percent done with drawing
@@ -38,6 +41,22 @@ def generate_hill_points(percent_semi_circle, semi_radius, y_coord, x_coord, hil
                 )
             )
     return (c_points, {'x': x_coord, 'y': y_coord}, { 'start': c_start, 'end': c2_start })
+    
+def draw_line(p1, p2):
+    l_points = []
+    d = p2.x-p1.x
+    num_points = (d/point_every_x)+1
+    slope = (p2.y-p1.y)/d
+    dx = d/(num_points-1)
+    for i in range(num_points):
+        l_points.append(
+            vec(
+                p1.x + dx*i, 
+                p1.y + dx*i*slope, 
+                0
+            )
+        )
+    return l_points
 
 initial_height = 1
 starting_position = vec(-3.5, initial_height, 0)
@@ -47,11 +66,31 @@ hill_points, circle_center, circle_range = generate_hill_points(
     semi_radius=1, 
     y_coord=0, 
     x_coord=0, 
-    hill_height=2, 
-    num_points=10
+    hill_height=2
 )
-bottom = hill_points[0].y
-cart_path = [starting_position, vec(hill_points[0].x-0.5, bottom, 0)] + hill_points + [ vec(hill_points[len(hill_points)-1].x+0.5, bottom, 0) ]
+bottom_1 = hill_points[0].y
+bottom_2 = hill_points[len(hill_points)-1].y
+# there should be a point for every change in x
+starting_line = draw_line(
+    starting_position, 
+    vec(hill_points[0].x-0.5, bottom_1, 0)
+)
+connecting_line = draw_line(
+    vec(hill_points[0].x-0.499, bottom_1, 0), 
+    hill_points[0]
+)
+ending_line = draw_line(
+    vec(
+        hill_points[len(hill_points)-1].x+0.01,
+        bottom_2,
+        0
+    ), 
+    vec(
+        hill_points[len(hill_points)-1].x+0.5, bottom_2, 0
+    )
+)
+
+cart_path = starting_line + connecting_line + hill_points + ending_line
 
 curve(pos=cart_path)
 
@@ -95,3 +134,12 @@ for i in range(len(cart_path)-1):
         cart.pos = cart.pos + (p2-p1) * velocity * dt
         kinetic_energy = g * cart_weight * (initial_height - cart.pos.y)
     cart.pos = p2
+    
+    
+    
+    
+    
+    
+    
+    
+    

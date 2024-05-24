@@ -65,8 +65,9 @@ cart_weight = 10
 cat_weight = 1
 total_weight = cart_weight + cat_weight
 
+# cannot put cat in cart in a compound because cat and cart need to separate at some point
 cat = box(
-    pos=(cart_path[0]+vec(0,0.05,0)), 
+    pos=(cart_path[0] + vec(0, 0.1, 0)), 
     length=0.15, 
     width=0.2, 
     height=0.25, 
@@ -79,9 +80,6 @@ cart = box(
     height=0.2,
     color=color.green
 )
-cartcat = compound(
-    [cat, cart]
-)
 
 dt = 0.01
 dx=0.5
@@ -92,6 +90,7 @@ g = 9.81
 
 current_angle = 0
 kinetic_energy = 10
+cat_in_cart = True
 
 for i in range(len(cart_path)-1):
     p1 = cart_path[i] # each point is a vector (xyz)
@@ -108,18 +107,33 @@ for i in range(len(cart_path)-1):
         angle *= -1
     change = angle-current_angle
     
-    cartcat.rotate(axis=vec(0, 0, 1), angle=change, origin=cartcat.pos)
+    cart.rotate(axis=vec(0, 0, 1), angle=change, origin=cart.pos)
+    cat.rotate(axis=vec(0, 0, 1), angle=change, origin=cat.pos)
     current_angle = angle
     
     percent_travel = dx/mag(p2-p1) 
-    
-    while cartcat.pos.x < p2.x:
+    while cart.pos.x < p2.x:
         rate(1/dt)
-        velocity = sqrt((2 * abs(kinetic_energy))/total_weight)
-        cartcat.pos = cartcat.pos + (p2-p1) * velocity * dt * percent_travel
-        kinetic_energy = g * total_weight * (initial_height - cartcat.pos.y)
-    cartcat.pos = p2 # after finishing traveling path, just set the position to last point to be safe
-    
+        apparent_weight = 0
+        if cat_in_cart:
+            apparent_weight = total_weight
+        else:
+            apparent_weight = cart_weight
+            
+        velocity = sqrt((2 * abs(kinetic_energy))/apparent_weight)
+        cart.pos = cart.pos + (p2-p1) * velocity * dt * percent_travel
+        kinetic_energy = g * apparent_weight * (initial_height - cart.pos.y)
+        
+        if cat_in_cart:
+            cat.pos = cat.pos + (p2-p1) * velocity * dt * percent_travel
+        else:
+            # kinematics here
+            pass
+        
+        if circle_range['start'] < cat.pos.x and cat_in_cart:
+            # centripetal force is only by gravity
+            # if centripetall force of gravity isn't enough, cat goes flying
+            pass
     
     
     

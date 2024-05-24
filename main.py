@@ -1,5 +1,6 @@
 Web VPython 3.2
 
+# semi radius = radius of the semi circle. don't know why its not just called radius
 def generate_hill_points(percent_semi_circle, semi_radius, y_coord, x_coord, hill_height, num_points):
     c_points = []
     circle_range = sqrt(semi_radius) * percent_semi_circle # how much to the left and right to draw the "circle"
@@ -37,14 +38,15 @@ def generate_hill_points(percent_semi_circle, semi_radius, y_coord, x_coord, hil
                     0
                 )
             )
-    return (c_points, {'x': x_coord, 'y': y_coord}, { 'start': c_start, 'end': c2_start })
+    return (c_points, vec(x_coord, y_coord, 0), { 'start': c_start, 'end': c2_start })
 
-initial_height = 1.5
+initial_height = 0.8
 starting_position = vec(-3.5, initial_height, 0)
 
+hill_radius = 1
 hill_points, circle_center, circle_range = generate_hill_points(
     percent_semi_circle=0.96, 
-    semi_radius=1, 
+    semi_radius=hill_radius, 
     y_coord=0, 
     x_coord=0, 
     hill_height=2,
@@ -64,10 +66,11 @@ curve(pos=cart_path)
 cart_weight = 10
 cat_weight = 1
 total_weight = cart_weight + cat_weight
+cat_holding_force = 0 # how many newtons of force is the cat "clawing" onto the bottom of the cart
 
 # cannot put cat in cart in a compound because cat and cart need to separate at some point
 cat = box(
-    pos=(cart_path[0] + vec(0, 0.1, 0)), 
+    pos=(cart_path[0]), 
     length=0.15, 
     width=0.2, 
     height=0.25, 
@@ -89,12 +92,18 @@ g = 9.81
 # interpolate between points based on velocity calculated from KE
 
 current_angle = 0
-kinetic_energy = 10
+kinetic_energy = 0.000000001
 cat_in_cart = True
+direction = 1
 
-for i in range(len(cart_path)-1):
+i = 0
+while i < len(cart_path)-1 and i >= 0:
+    if i == 0 and direction < 0:
+        direction = 1
+        kinetic_energy = 0.000000001
+    
     p1 = cart_path[i] # each point is a vector (xyz)
-    p2 = cart_path[i+1]
+    p2 = cart_path[i+direction]
     going_down = False
     if p1.y > p2.y:
         going_down = True
@@ -105,14 +114,15 @@ for i in range(len(cart_path)-1):
     angle = atan(y_dist/x_dist)
     if going_down:
         angle *= -1
+    angle *= direction
     change = angle-current_angle
     
     cart.rotate(axis=vec(0, 0, 1), angle=change, origin=cart.pos)
     cat.rotate(axis=vec(0, 0, 1), angle=change, origin=cat.pos)
     current_angle = angle
     
-    percent_travel = dx/mag(p2-p1) 
-    while cart.pos.x < p2.x:
+    percent_travel = dx/mag(p2-p1)
+    while cart.pos.x < p2.x if direction > 0 else cart.pos.x > p2.x :
         rate(1/dt)
         apparent_weight = 0
         if cat_in_cart:
@@ -121,6 +131,9 @@ for i in range(len(cart_path)-1):
             apparent_weight = cart_weight
             
         velocity = sqrt((2 * abs(kinetic_energy))/apparent_weight)
+        if kinetic_energy < 0:
+            direction = -1
+            
         cart.pos = cart.pos + (p2-p1) * velocity * dt * percent_travel
         kinetic_energy = g * apparent_weight * (initial_height - cart.pos.y)
         
@@ -130,10 +143,20 @@ for i in range(len(cart_path)-1):
             # kinematics here
             pass
         
-        if circle_range['start'] < cat.pos.x and cat_in_cart:
+        if circle_range['start'] < cat.pos.x and cat.pos.x < circle_range['end'] and cat_in_cart:
             # centripetal force is only by gravity
             # if centripetall force of gravity isn't enough, cat goes flying
-            pass
+            required_force = cat_weight * velocity**2 / hill_radius
+            gravity_direction = vec(0, 1, 0)
+            cat_to_center = norm(cat.pos-circle_center)
+            centripetal_force = cat_weight * g * abs(dot(gravity_direction, cat_to_center)) + cat_holding_force
+            
+            if required_force > centripetal_force:
+                pass
+    if i > 0:
+        cat.pos = p2
+        cart.pos = p2
+    i += direction
     
     
     

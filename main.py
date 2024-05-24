@@ -40,7 +40,7 @@ def generate_hill_points(percent_semi_circle, semi_radius, y_coord, x_coord, hil
             )
     return (c_points, vec(x_coord, y_coord, 0), { 'start': c_start, 'end': c2_start })
 
-initial_height = 0.8
+initial_height = 1.5
 starting_position = vec(-3.5, initial_height, 0)
 
 hill_radius = 1
@@ -66,7 +66,9 @@ curve(pos=cart_path)
 cart_weight = 10
 cat_weight = 1
 total_weight = cart_weight + cat_weight
-cat_holding_force = 0 # how many newtons of force is the cat "clawing" onto the bottom of the cart
+# how many newtons of force is the cat "clawing" onto the bottom of the cart
+cat_holding_force = 8 # basically, it doesn't take much for a cat to go "flying", so lets add some more centripetal force to make it more fun
+# lets just imagine the cat is "clawing" onto the cart for dear life
 
 # cannot put cat in cart in a compound because cat and cart need to separate at some point
 cat = box(
@@ -118,7 +120,9 @@ while i < len(cart_path)-1 and i >= 0:
     change = angle-current_angle
     
     cart.rotate(axis=vec(0, 0, 1), angle=change, origin=cart.pos)
-    cat.rotate(axis=vec(0, 0, 1), angle=change, origin=cat.pos)
+    
+    if cat_in_cart:
+        cat.rotate(axis=vec(0, 0, 1), angle=change, origin=cat.pos)
     current_angle = angle
     
     percent_travel = dx/mag(p2-p1)
@@ -152,9 +156,11 @@ while i < len(cart_path)-1 and i >= 0:
             centripetal_force = cat_weight * g * abs(dot(gravity_direction, cat_to_center)) + cat_holding_force
             
             if required_force > centripetal_force:
-                pass
+                cat_in_cart = False
+                print("cat go flying")
     if i > 0:
-        cat.pos = p2
+        if cat_in_cart:
+            cat.pos = p2
         cart.pos = p2
     i += direction
     

@@ -1,5 +1,8 @@
 Web VPython 3.2
 
+scene.autoscale = False
+scene.range=3
+
 # semi radius = radius of the semi circle. don't know why its not just called radius
 def generate_hill_points(percent_semi_circle, semi_radius, y_coord, x_coord, hill_height, num_points):
     c_points = []
@@ -40,6 +43,14 @@ def generate_hill_points(percent_semi_circle, semi_radius, y_coord, x_coord, hil
             )
     return (c_points, vec(x_coord, y_coord, 0), { 'start': c_start, 'end': c2_start })
 
+def draw_line(p1, p2, num_points):
+    slope = (p2 - p1)/(num_points - 1)
+    ps = [p1]
+    for i in range(1, num_points):
+        ps.append(ps[i-1] + slope)
+
+    return ps
+
 def above_points(cat, path):
     # find points closest to cat's x coordinate
     # return two points that cat is between (based on x coord only)
@@ -53,8 +64,8 @@ def path_intersect(cat, path):
     threshold = 0.01
     
     avg = (above[0] + above[1])/2
-    
-    return mag(cat.pos-avg) < threshold
+
+    return (cat.pos.y-avg.y-(cat.height/2) < threshold, avg, diff_angle(above[1]-above[0], vec(1, 0, 0)))
 
 def adjust_cat(cat, p1, p2, direction, point=2):
     # this needs to be a little bit above in the perpendicular direction
@@ -66,7 +77,7 @@ def adjust_cat(cat, p1, p2, direction, point=2):
     else:
         cat.pos = [p1,p2][point-1] + perp_dir * 0.1
 
-initial_height = 1.0
+initial_height = 3
 starting_position = vec(-3.5, initial_height, 0)
 
 hill_radius = 1
@@ -81,9 +92,17 @@ hill_points, circle_center, circle_range = generate_hill_points(
 bottom_1 = hill_points[0].y
 bottom_2 = hill_points[len(hill_points)-1].y
 
-cart_path = [ starting_position, vec(hill_points[0].x-0.5, bottom_1, 0) ] + hill_points + [ vec(
-        hill_points[len(hill_points)-1].x+0.5, bottom_2, 0
-    ) ]
+cart_path = draw_line(
+    starting_position, 
+    vec(hill_points[0].x-0.5, bottom_1, 0) ,
+    30
+) + hill_points + draw_line(
+    hill_points[len(hill_points)-1] + vec(0.01, 0, 0),  # need to have a vector because having two of the same point breaks the program (xdist = 0, division by 0)
+    vec(
+        hill_points[len(hill_points)-1].x+5, bottom_2, 0
+    ), 
+    30
+)
 
 curve(pos=cart_path)
 
@@ -128,6 +147,7 @@ direction = 1
 # flying variables
 cat_x = 0
 cat_y = 0
+cat_angle = 0
 cat_grounded = False
 
 i = 0
@@ -156,8 +176,8 @@ while i < len(cart_path)-1 and i >= 0:
     if cat_in_cart:
         cat.rotate(axis=vec(0, 0, 1), angle=change, origin=cat.pos)
     current_angle = angle
-    
     percent_travel = dx/mag(p2-p1)
+    
     while cart.pos.x < p2.x if direction > 0 else cart.pos.x > p2.x :
         rate(1/dt)
         apparent_weight = 0
@@ -182,9 +202,15 @@ while i < len(cart_path)-1 and i >= 0:
                 cat_y = cat_y - g * vec(0, 1, 0) * dt
                 
                 # check if cat hits the track and "slide" down
-                if path_intersect(cat, cart_path):
+                is_intersect, avg_point, c_angle = path_intersect(cat, cart_path)
+                if is_intersect:
                     cat_grounded = True
+                    c_change = cat_angle-c_angle
+                    # this is supposed to make the cat fall flat but it doesn't
+                    cat.rotate(axis=vec(0, 0, 1), angle=c_change, origin=cat.pos)
+                    cat_angle=c_angle
                     print("Cat fell")
+                    
             
         
         if circle_range['start'] < cat.pos.x and cat.pos.x < circle_range['end'] and cat_in_cart:
@@ -203,11 +229,13 @@ while i < len(cart_path)-1 and i >= 0:
                 velocity_angle = diff_angle(cat_look_direction, vec(1, 0, 0))
                 cat_x = velocity * cos(velocity_angle) * vec(1, 0, 0)
                 cat_y = velocity * sin(velocity_angle) * vec(0, 1, 0)
+                cat_angle = current_angle
                 
     if i > 0:
         if cat_in_cart:
             adjust_cat(cat, p1, p2, direction)
         cart.pos = p2
+        
     i += direction
     
     

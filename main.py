@@ -77,7 +77,7 @@ def adjust_cat(cat, p1, p2, direction, point=2):
     else:
         cat.pos = [p1,p2][point-1] + perp_dir * 0.1
 
-initial_height = 3
+initial_height = 1.5
 starting_position = vec(-3.5, initial_height, 0)
 
 hill_radius = 1
@@ -151,6 +151,14 @@ cat_angle = 0
 cat_grounded = False
 
 i = 0
+
+# SLIDERS
+
+def set_starting_height(evt):
+    pass
+
+starting_height_slider = slider(min=0, max=10, value=initial_height, bind=set_starting_height)
+
 while i < len(cart_path)-1 and i >= 0:
     if i == 0 and direction < 0:
         direction = 1
@@ -237,10 +245,11 @@ while i < len(cart_path)-1 and i >= 0:
         cart.pos = p2
         
     i += direction
-    
-    
-    
-    
+
+if cat_in_cart:
+    print("cat survived")
+else:
+    print("cat died")
     
     
     

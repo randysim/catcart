@@ -40,7 +40,33 @@ def generate_hill_points(percent_semi_circle, semi_radius, y_coord, x_coord, hil
             )
     return (c_points, vec(x_coord, y_coord, 0), { 'start': c_start, 'end': c2_start })
 
-initial_height = 1.5
+def above_points(cat, path):
+    # find points closest to cat's x coordinate
+    # return two points that cat is between (based on x coord only)
+    for i in range(len(path)):
+        p = path[i]
+        if p.x > cat.pos.x:
+            return [path[i-1], path[i]]
+
+def path_intersect(cat, path):
+    above = above_points(cat, path)
+    threshold = 0.01
+    
+    avg = (above[0] + above[1])/2
+    
+    return mag(cat.pos-avg) < threshold
+
+def adjust_cat(cat, p1, p2, direction, point=2):
+    # this needs to be a little bit above in the perpendicular direction
+    look_dir = norm(p2-p1)
+    perp_dir = rotate(look_dir, angle=pi/2 * direction)
+    
+    if abs(p2.y - p1.y) < 0.001:
+        cat.pos = [p1,p2][point-1] + vec(0, 0.1, 0)
+    else:
+        cat.pos = [p1,p2][point-1] + perp_dir * 0.1
+
+initial_height = 1.0
 starting_position = vec(-3.5, initial_height, 0)
 
 hill_radius = 1
@@ -78,6 +104,7 @@ cat = box(
     height=0.25, 
     color=color.orange
 )
+adjust_cat(cat, cart_path[0], cart_path[1], 1, 1)
 cart = box(
     pos=cart_path[0], 
     length=0.3, 
@@ -97,6 +124,11 @@ current_angle = 0
 kinetic_energy = 0.000000001
 cat_in_cart = True
 direction = 1
+
+# flying variables
+cat_x = 0
+cat_y = 0
+cat_grounded = False
 
 i = 0
 while i < len(cart_path)-1 and i >= 0:
@@ -144,8 +176,16 @@ while i < len(cart_path)-1 and i >= 0:
         if cat_in_cart:
             cat.pos = cat.pos + (p2-p1) * velocity * dt * percent_travel
         else:
-            # kinematics here
-            pass
+            if not cat_grounded:
+                # kinematics here
+                cat.pos = cat.pos + cat_x * dt + cat_y * dt
+                cat_y = cat_y - g * vec(0, 1, 0) * dt
+                
+                # check if cat hits the track and "slide" down
+                if path_intersect(cat, cart_path):
+                    cat_grounded = True
+                    print("Cat fell")
+            
         
         if circle_range['start'] < cat.pos.x and cat.pos.x < circle_range['end'] and cat_in_cart:
             # centripetal force is only by gravity
@@ -158,9 +198,15 @@ while i < len(cart_path)-1 and i >= 0:
             if required_force > centripetal_force:
                 cat_in_cart = False
                 print("cat go flying")
+                
+                cat_look_direction = norm(p2-p1)
+                velocity_angle = diff_angle(cat_look_direction, vec(1, 0, 0))
+                cat_x = velocity * cos(velocity_angle) * vec(1, 0, 0)
+                cat_y = velocity * sin(velocity_angle) * vec(0, 1, 0)
+                
     if i > 0:
         if cat_in_cart:
-            cat.pos = p2
+            adjust_cat(cat, p1, p2, direction)
         cart.pos = p2
     i += direction
     

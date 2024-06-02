@@ -1,17 +1,62 @@
 Web VPython 3.2
 
 scene.autoscale = False
-scene.range=3
+scene.range = 4
+scene.center = vec(2.5, 0.5, 0)
 
-# semi radius = radius of the semi circle. don't know why its not just called radius
-def generate_hill_points(percent_semi_circle, semi_radius, y_coord, x_coord, hill_height, num_points):
+# helpful math functions
+
+# limit angle between 0 and 2 PI
+def simplify_angle(angle):
+    while angle < 0:
+        angle += 2 * pi
+    while angle > 2 * pi:
+        angle -= 2 * pi
+    return angle
+
+def get_angle(p1, p2):
+    dir_vector = p2-p1
+    angle = diff_angle(dir_vector, vec(1, 0, 0))
+    
+    return simplify_angle(angle)
+    
+# returns normal representing the perpendicular line intersecting the line connecting p1 and p2
+def get_perpendicular(p1, p2):
+    look_dir = norm(p2-p1)
+    perp_dir = rotate(look_dir, angle=pi/2)
+    
+    return perp_dir
+
+def update_cat(cart, cat, p1, p2):
+    cat.pos = cart.pos + get_perpendicular(p1, p2) * 0.2 * cart.direction
+
+def get_points_above(path, cat):
+    for i in range(len(path)):
+        point = path[i]
+        if cat.pos.x < point.x:
+            return [path[i-1], point]
+            
+def path_intersect(path, cat):
+    above_points = get_points_above(path, cat)
+    avg_y = (above_points[0].y + above_points[1].y)/2
+    threshold = 0.001
+    
+    if cat.velocity.y > 0:
+        return (False, above_points)
+    
+    return (cat.pos.y-avg_y-(cat.height/2) < threshold, above_points)
+    
+
+# path generation logic
+def generate_hill_points(percent_semi_circle, radius, y_coord, x_coord, hill_height, num_points, left_curve_amount=1.5):
     c_points = []
-    circle_range = sqrt(semi_radius) * percent_semi_circle # how much to the left and right to draw the "circle"
-    c1_start = x_coord-(semi_radius+circle_range) # start of the first curve
+    connection_width = 2 # connecting line width
+    circle_range = sqrt(radius) * percent_semi_circle # how much to the left and right to draw the "circle"
+    c1_start = x_coord-(radius+circle_range+left_curve_amount) # start of the first curve
     c_start = x_coord-(circle_range)# start of drawing the circle
     c2_start = x_coord+circle_range # start of drawing the 2nd curve
     
-    hill_width = (semi_radius+circle_range)-c1_start
+    hill_width = (radius+circle_range)-c1_start
     
     for i in range(num_points):
         percent_done = i/num_points # percent done with drawing
@@ -20,28 +65,32 @@ def generate_hill_points(percent_semi_circle, semi_radius, y_coord, x_coord, hil
         if (cx > c2_start):
             c_points.push(
                 vec(
-                    cx, 
-                    (hill_height/semi_radius) * ((cx - x_coord - semi_radius - circle_range)**2) - (hill_height * semi_radius - sqrt(semi_radius - circle_range**2)) + y_coord, 
+                    cx+connection_width, 
+                    (hill_height/radius) * ((cx - x_coord - radius - circle_range)**2) - (hill_height * radius - sqrt(radius - circle_range**2)) + y_coord, 
                     0
                 )
             )
         elif (cx > c_start):
             c_points.push(
                 vec(
-                    cx,
-                    sqrt(semi_radius-(cx-x_coord)**2)+y_coord,
+                    cx+connection_width,
+                    sqrt(radius-(cx-x_coord)**2)+y_coord,
                     0
                 )    
             )
         elif (cx > c1_start):
+            offset = 0
+            if cx > c1_start + left_curve_amount:
+                offset = connection_width
+            
             c_points.push(
                 vec(
-                    cx, 
-                    (hill_height/semi_radius) * ((cx - x_coord + semi_radius + circle_range)**2) - (hill_height * semi_radius - sqrt(semi_radius - circle_range**2)) + y_coord, 
+                    cx + offset, 
+                    (hill_height/radius) * ((cx - x_coord + radius + circle_range)**2) - (hill_height * radius - sqrt(radius - circle_range**2)) + y_coord, 
                     0
                 )
             )
-    return (c_points, vec(x_coord, y_coord, 0), { 'start': c_start, 'end': c2_start })
+    return (c_points, vec(x_coord + connection_width, y_coord + connection_width, 0), { 'start': c_start, 'end': c2_start } )
 
 def draw_line(p1, p2, num_points):
     slope = (p2 - p1)/(num_points - 1)
@@ -51,52 +100,21 @@ def draw_line(p1, p2, num_points):
 
     return ps
 
-def above_points(cat, path):
-    # find points closest to cat's x coordinate
-    # return two points that cat is between (based on x coord only)
-    for i in range(len(path)):
-        p = path[i]
-        if p.x > cat.pos.x:
-            return [path[i-1], path[i]]
-
-def path_intersect(cat, path):
-    above = above_points(cat, path)
-    threshold = 0.01
-    
-    avg = (above[0] + above[1])/2
-
-    return (cat.pos.y-avg.y-(cat.height/2) < threshold, avg, diff_angle(above[1]-above[0], vec(1, 0, 0)))
-
-def adjust_cat(cat, p1, p2, direction, point=2):
-    # this needs to be a little bit above in the perpendicular direction
-    look_dir = norm(p2-p1)
-    perp_dir = rotate(look_dir, angle=pi/2 * direction)
-    
-    if abs(p2.y - p1.y) < 0.001:
-        cat.pos = [p1,p2][point-1] + vec(0, 0.1, 0)
-    else:
-        cat.pos = [p1,p2][point-1] + perp_dir * 0.1
-
-def generate_path(initial_height, percent_semi_circle, semi_radius, y_coord, x_coord, hill_height, hill_points):
-    starting_position = vec(-3.5, initial_height, 0)
-
+def generate_path(left_curve_amount, percent_semi_circle, radius, y_coord, x_coord, hill_height, hill_points):
     hill_radius = 1
     hill_points, circle_center, circle_range = generate_hill_points(
         percent_semi_circle=percent_semi_circle, 
-        semi_radius=semi_radius, 
+        radius=radius, 
         y_coord=y_coord, 
         x_coord=x_coord, 
         hill_height=hill_height,
-        num_points=hill_points
+        num_points=hill_points,
+        left_curve_amount=left_curve_amount
     )
     bottom_1 = hill_points[0].y
     bottom_2 = hill_points[len(hill_points)-1].y
     
-    cart_path = draw_line(
-        starting_position, 
-        vec(hill_points[0].x-0.5, bottom_1, 0) ,
-        30
-    ) + hill_points + draw_line(
+    cart_path = hill_points + draw_line(
         hill_points[len(hill_points)-1] + vec(0.01, 0, 0),  # need to have a vector because having two of the same point breaks the program (xdist = 0, division by 0)
         vec(
             hill_points[len(hill_points)-1].x+5, bottom_2, 0
@@ -106,229 +124,191 @@ def generate_path(initial_height, percent_semi_circle, semi_radius, y_coord, x_c
     
     return (cart_path, circle_center, circle_range)
 
-initial_height = 1.2
+# object generation logic
+def generate_cart():
+    cart_length = 0.4
+    cart_width = 0.2
+    cart_height = 0.15
+    thickness = 0.02
+    offset = thickness/2
+    
+    left_box = box(size=vec(thickness, cart_height, cart_width), pos=vec(-cart_length/2 + offset, 0, 0), color=color.green)
+    right_box = box(size=vec(thickness, cart_height, cart_width), pos=vec(cart_length/2 - offset, 0, 0), color=color.green)
+    back_box = box(size=vec(cart_length, cart_height, thickness), pos=vec(0, 0, -cart_width/2 + offset), color=color.green)
+    forward_box = box(size=vec(cart_length, cart_height, thickness), pos=vec(0, 0, cart_width/2 - offset), color=color.green)
+    bottom_box = box(size=vec(cart_length, thickness, cart_width), pos=vec(0, -cart_height/2 + offset, 0), color=color.green)
+    
+    cart = compound([left_box, right_box, back_box, forward_box, bottom_box])
+    return cart
+
+def generate_cat():
+    cat_radius = 0.15
+    cat_head = sphere(radius=cat_radius, pos=vec(0, 0, 0), color=color.orange)
+    cat_left_ear = cone(radius=0.1, pos=vec(-cat_radius/2, cat_radius/1.5, 0), color=color.orange, length=cat_radius)
+    cat_right_ear = cone(radius=0.1, pos=vec(cat_radius/2, cat_radius/1.5, 0), color=color.orange, length=cat_radius)
+    cat_left_ear.rotate(axis=vec(0, 0, 1), angle=pi/2, origin=cat_left_ear.pos)
+    cat_right_ear.rotate(axis=vec(0, 0, 1), angle=pi/2, origin=cat_right_ear.pos)
+    cat_left_eye = sphere(radius=cat_radius/4, pos=vec(-cat_radius/3, 0, cat_radius), color=color.black)
+    cat_right_eye = sphere(radius=cat_radius/4, pos=vec(cat_radius/3, 0, cat_radius), color=color.black)
+    
+    cat = compound([cat_head, cat_left_ear, cat_right_ear, cat_left_eye, cat_right_eye])
+    return cat
+
+# path variables
+left_curve_amount = 1.5
 hill_radius = 1
+bc = 0.5 # how much before center can we start calculating centripetal force (cheesed solution because the actual solution requires radius of curvature and its just so complicated)
 
-cart_path, circle_center, circle_range = generate_path(
-    initial_height=initial_height,
-    percent_semi_circle=0.96,
-    semi_radius=hill_radius,
-    y_coord=0,
-    x_coord=0,
-    hill_height=2,
-    hill_points=150
-)
-
-path_curve = curve(pos=cart_path)
-
-# SIMULATION
-# weight in kg
-cart_weight = 10
-cat_weight = 1
-total_weight = cart_weight + cat_weight
-# how many newtons of force is the cat "clawing" onto the bottom of the cart
-cat_holding_force = 8 # basically, it doesn't take much for a cat to go "flying", so lets add some more centripetal force to make it more fun
-# lets just imagine the cat is "clawing" onto the cart for dear life
-
-# cannot put cat in cart in a compound because cat and cart need to separate at some point
-cat = box(
-    pos=(cart_path[0]), 
-    length=0.15, 
-    width=0.2, 
-    height=0.25, 
-    color=color.orange
-)
-adjust_cat(cat, cart_path[0], cart_path[1], 1, 1)
-cart = box(
-    pos=cart_path[0], 
-    length=0.3, 
-    width = 0.2, 
-    height=0.2,
-    color=color.green
-)
-
+# physics variables
 dt = 0.01
-dx=0.5
+dx = 0.5
 g = 9.81
 
-# animation loop
-# interpolate between points based on velocity calculated from KE
-
-current_angle = 0
-kinetic_energy = 0.000000001
-cat_in_cart = True
-direction = 1
-
-# flying variables
-cat_x = 0
-cat_y = 0
-cat_angle = 0
-cat_grounded = False
-cat_velo = 0
-
-i = 0
-
-# SLIDERS
-
-def set_starting_height(evt):
-    global path_curve, cart_path, initial_height, cat, cart, i, cat_x, cat_y, cat_angle, cat_grounded, cat_velo, current_angle, cat_in_cart, direction, kinetic_energy, stop, ended
-    
-    # get rid of old points and generate again
-    path_curve.visible = False
-    initial_height = evt.value
-    cart_path, circle_center, circle_range = generate_path(
-        initial_height=initial_height,
-        percent_semi_circle=0.96,
-        semi_radius=hill_radius,
-        y_coord=0,
-        x_coord=0,
-        hill_height=2,
-        hill_points=150
-    )
-    
-    path_curve = curve(pos=cart_path)
-    
-    # reset cat, cart, and counter, and other cat variables
-    cat.visible = False
+# buttons
+def reset_scene():
+    global reset, cart, cat, path_completed
     cart.visible = False
-    
-    cat_x = 0
-    cat_y = 0
-    cat_angle = 0
-    cat_grounded = False
-    cat_velo = 0
-    current_angle = 0
-    cat_in_cart = True
-    direction = 1
-    kinetic_energy = 0.000000001
-    if not ended:
-        stop = True
-    else:
-        ended = False
-    
-    i=0
-    cat = box(
-        pos=(cart_path[0]), 
-        length=0.15, 
-        width=0.2, 
-        height=0.25, 
-        color=color.orange
-    )
-    adjust_cat(cat, cart_path[0], cart_path[1], 1, 1)
-    cart = box(
-        pos=cart_path[0], 
-        length=0.3, 
-        width = 0.2, 
-        height=0.2,
-        color=color.green
-    )
-    
-    start_loop()
+    cat.visible = False
+    cart = generate_cart()
+    cat = generate_cat()
+    path_completed = False
+    reset = True
+reset_button = button(text='reset', bind=reset_scene)
 
-starting_height_slider = slider(min=0, max=10, value=initial_height, bind=set_starting_height)
-stop = False
-ended = False
+# persistent variables
+reset = False
+path_completed = False
+cart = generate_cart()
+cat = generate_cat()
 
-def start_loop():
-    global path_curve, cart_path, initial_height, cat, cart, i, cat_x, cat_y, cat_angle, cat_grounded, cat_velo, current_angle, cat_in_cart, direction, kinetic_energy, stop, ended
-    while i < len(cart_path)-1 and i >= 0:
-        if stop:
-            stop = False
-            return
+while True:
+    if not path_completed:
+        cart_path, circle_center, circle_range = generate_path(
+            left_curve_amount=left_curve_amount,
+            percent_semi_circle=0.96,
+            radius=hill_radius,
+            y_coord=0,
+            x_coord=0,
+            hill_height=2,
+            hill_points=150
+        )
         
-        if i == 0 and direction < 0:
-            direction = 1
-            kinetic_energy = 0.000000001
+        path_curve = curve(pos=cart_path)
         
-        p1 = cart_path[i] # each point is a vector (xyz)
-        p2 = cart_path[i+direction]
-        going_down = False
-        if p1.y > p2.y:
-            going_down = True
+        # object variables
+
+        initial_height = cart_path[0].y
+        initial_kinetic_energy = 0.00001
         
-        y_dist = abs(p2.y-p1.y)
-        x_dist = abs(p2.x-p1.x)
+        cart.weight = 10 # kg
+        cart.angle = 0 # radians
+        cart.kinetic_energy = initial_kinetic_energy
+        cart.direction = 1
+        cart.pos = cart_path[0]
         
-        angle = atan(y_dist/x_dist)
-        if going_down:
-            angle *= -1
-        angle *= direction
-        change = angle-current_angle
+        cat.weight = 1 # kg
+        cat.in_cart = True
+        cat.grounded = False
+        cat.angle = 0
+        cat.velocity = vec(0, 0, 0)
+        update_cat(cart, cat, cart_path[0], cart_path[1])
         
-        cart.rotate(axis=vec(0, 0, 1), angle=change, origin=cart.pos)
-        
-        if cat_in_cart:
-            cat.rotate(axis=vec(0, 0, 1), angle=change, origin=cat.pos)
-        current_angle = angle
-        percent_travel = dx/mag(p2-p1)
-        
-        while cart.pos.x < p2.x if direction > 0 else cart.pos.x > p2.x :
-            rate(1/dt)
-            apparent_weight = 0
-            if cat_in_cart:
-                apparent_weight = total_weight
-            else:
-                apparent_weight = cart_weight
-                
-            velocity = sqrt((2 * abs(kinetic_energy))/apparent_weight)
-            if kinetic_energy < 0:
-                direction = -1
-                
-            cart.pos = cart.pos + (p2-p1) * velocity * dt * percent_travel
-            kinetic_energy = g * apparent_weight * (initial_height - cart.pos.y)
+        # loop variables
+        i = 0
+    
+        while i < len(cart_path) - 1 and i >= 0:
+            if reset:
+                break
             
-            if cat_in_cart:
-                cat.pos = cat.pos + (p2-p1) * velocity * dt * percent_travel
-            else:
-                if not cat_grounded:
+            if i == 0 and cart.direction < 0:
+                cart.direction = 1
+                cart.kinetic_energy = initial_kinetic_energy
+            
+            p1 = cart_path[i]
+            p2 = cart_path[i+cart.direction]
+            
+            going_down = p1.y > p2.y
+            
+            angle = get_angle(p1, p2)
+            if going_down:
+                angle *= -1
+            if cart.direction < 0:
+                angle += pi
+            
+            angle = simplify_angle(angle)
+                
+            cart.rotate(axis=vec(0, 0, 1), angle=angle-cart.angle, origin=cart.pos)
+            
+            if cat.in_cart:
+                cat.rotate(axis=vec(0, 0, 1), angle=angle-cart.angle, origin=cat.pos)
+                cat.angle = angle
+                
+            cart.angle = angle
+            
+            percent_travel = dx/mag(p2-p1) # how much progress of the path should each iteration make, this is to prevent reliance on # of points in path
+            rs = False
+            while cart.pos.x < p2.x if cart.direction > 0 else cart.pos.x > p2.x:
+                rate(1/dt)
+                
+                if reset:
+                    rs = True
+                    break
+                
+                apparent_weight = cart.weight
+                if cat.in_cart:
+                    apparent_weight += cat.weight
+                
+                velocity = sqrt((2 * abs(cart.kinetic_energy))/apparent_weight)
+                cart.pos += (p2-p1) * velocity * dt * percent_travel
+                
+                if cat.in_cart:
+                    update_cat(cart, cat, p1, p2)
+                
+                cart.kinetic_energy = g * apparent_weight * (initial_height - cart.pos.y)
+                
+                if cart.kinetic_energy < 0:
+                    cart.direction = -1
+                
+                if not cat.in_cart:
                     # kinematics here
-                    cat.pos = cat.pos + cat_x * dt + cat_y * dt
-                    cat_y = cat_y - g * vec(0, 1, 0) * dt
-                    
-                    # check if cat hits the track and "slide" down
-                    is_intersect, avg_point, c_angle = path_intersect(cat, cart_path)
-                    if is_intersect:
-                        cat_grounded = True
-                        c_change = cat_angle-c_angle
-                        # this is supposed to make the cat fall flat but it doesn't
-                        cat.rotate(axis=vec(0, 0, 1), angle=c_change, origin=cat.pos)
-                        cat_angle=c_angle
-                        print("Cat fell")
+                    if not cat.grounded:
+                        cat.pos += cat.velocity * dt * dx
+                        cat.velocity -= g * vec(0, 1, 0) * dt
                         
+                        is_intersect, above_points = path_intersect(cart_path, cat)
+                        
+                        if is_intersect:
+                            print("cat died")
+                            cat.grounded = True
+                        
+                elif circle_center.x - bc < cart.pos.x and cart.pos.x < circle_center.x + bc and not cat.grounded:
+                    # centripetal force calculation here
+                    centrifugal_force = cat.weight * velocity ** 2 / hill_radius
+                    gravity_normal = vec(0, 1, 0)
+                    center_to_cat = norm(cat.pos - circle_center)
+                    centripetal_force = cat.weight * g * abs(dot(gravity_normal, center_to_cat))
+                    
+                    if centrifugal_force > centripetal_force:
+                        cat.in_cart = False
+                        print("cat go flying")
+                        
+                        cat.velocity = velocity * vec(cos(cat.angle), sin(cat.angle), 0)
                 
-            
-            if circle_range['start'] < cat.pos.x and cat.pos.x < circle_range['end'] and cat_in_cart:
-                # centripetal force is only by gravity
-                # if centripetall force of gravity isn't enough, cat goes flying
-                required_force = cat_weight * velocity**2 / hill_radius
-                gravity_direction = vec(0, 1, 0)
-                cat_to_center = norm(cat.pos-circle_center)
-                centripetal_force = cat_weight * g * abs(dot(gravity_direction, cat_to_center)) + cat_holding_force
-                print(str(required_force) + " " + str(centripetal_force))
-                if required_force > centripetal_force:
-                    cat_in_cart = False
-                    print("cat go flying")
-                    
-                    cat_look_direction = norm(p2-p1)
-                    velocity_angle = diff_angle(cat_look_direction, vec(1, 0, 0))
-                    cat_x = velocity * cos(velocity_angle) * vec(1, 0, 0)
-                    cat_y = velocity * sin(velocity_angle) * vec(0, 1, 0)
-                    cat_angle = current_angle
-                    
-        if i > 0:
-            if cat_in_cart:
-                adjust_cat(cat, p1, p2, direction)
             cart.pos = p2
+            if cat.in_cart:
+                update_cat(cart, cat, p1, p2)
+                
+            i += cart.direction
+            if rs:
+                break
+        if not reset:
+            path_completed = True
+        else:
+            reset = False
+    else:
+        rate(1/dt)
             
-        i += direction
-    ended = True
-start_loop()
+    
 
-if cat_in_cart:
-    print("cat survived")
-else:
-    print("cat died")
-    
-    
-    
-    
+
+

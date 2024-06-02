@@ -90,7 +90,7 @@ def generate_hill_points(percent_semi_circle, radius, y_coord, x_coord, hill_hei
                     0
                 )
             )
-    return (c_points, vec(x_coord + connection_width, y_coord + connection_width, 0), { 'start': c_start, 'end': c2_start } )
+    return (c_points, vec(x_coord + connection_width, y_coord + connection_width, 0), { 'start': c_start + connection_width, 'end': c2_start + connection_width } )
 
 def draw_line(p1, p2, num_points):
     slope = (p2 - p1)/(num_points - 1)
@@ -281,7 +281,7 @@ while True:
                             print("cat died")
                             cat.grounded = True
                         
-                elif circle_center.x - bc < cart.pos.x and cart.pos.x < circle_center.x + bc and not cat.grounded:
+                elif circle_range['start'] < cat.pos.x and cat.pos.x < circle_range['end'] and not cat.grounded:
                     # centripetal force calculation here
                     centrifugal_force = cat.weight * velocity ** 2 / hill_radius
                     gravity_normal = vec(0, 1, 0)

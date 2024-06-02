@@ -155,35 +155,22 @@ def generate_cat():
     return cat
 
 # path variables
-left_curve_amount = 1.5
+left_curve_amount = 1.22
 hill_radius = 1
-bc = 0.5 # how much before center can we start calculating centripetal force (cheesed solution because the actual solution requires radius of curvature and its just so complicated)
 
 # physics variables
 dt = 0.01
 dx = 0.5
 g = 9.81
 
-# buttons
+# user input
 def reset_scene():
-    global reset, cart, cat, path_completed
+    global reset, cart, cat, path_completed, path_curve, cart_path, circle_center, circle_range
     cart.visible = False
     cat.visible = False
-    cart = generate_cart()
-    cat = generate_cat()
-    path_completed = False
-    reset = True
-reset_button = button(text='reset', bind=reset_scene)
-
-# persistent variables
-reset = False
-path_completed = False
-cart = generate_cart()
-cat = generate_cat()
-
-while True:
-    if not path_completed:
-        cart_path, circle_center, circle_range = generate_path(
+    path_curve.visible = False
+    
+    cart_path, circle_center, circle_range = generate_path(
             left_curve_amount=left_curve_amount,
             percent_semi_circle=0.96,
             radius=hill_radius,
@@ -192,8 +179,44 @@ while True:
             hill_height=2,
             hill_points=150
         )
+    path_curve = curve(pos=cart_path)
+    
+    cart = generate_cart()
+    cat = generate_cat()
+    path_completed = False
+    reset = True
+def set_left_curve(evt):
+    global left_curve_amount
+    left_curve_amount = evt.value
+    reset_scene()
+reset_button = button(text='reset', bind=reset_scene)
+left_curve_slider = slider(min=0.5, max=3, value=left_curve_amount, bind=set_left_curve)
+
+# persistent variables
+reset = False
+path_completed = False
+cart = generate_cart()
+cat = generate_cat()
+
+cart_path, circle_center, circle_range = generate_path(
+            left_curve_amount=left_curve_amount,
+            percent_semi_circle=0.96,
+            radius=hill_radius,
+            y_coord=0,
+            x_coord=0,
+            hill_height=2,
+            hill_points=150
+        )
+path_curve = curve(pos=cart_path)
+
+while True:
+    if not path_completed:
+        # set scene
+        scene.autoscale = False
+        scene.range = 4
+        scene.center = vec(2.5, 0.5, 0)
         
-        path_curve = curve(pos=cart_path)
+        
         
         # object variables
 
@@ -210,6 +233,7 @@ while True:
         cat.in_cart = True
         cat.grounded = False
         cat.angle = 0
+        cat.has_said_feeling = False
         cat.velocity = vec(0, 0, 0)
         update_cat(cart, cat, cart_path[0], cart_path[1])
         
@@ -289,10 +313,30 @@ while True:
                     centripetal_force = cat.weight * g * abs(dot(gravity_normal, center_to_cat))
                     
                     if centrifugal_force > centripetal_force:
-                        cat.in_cart = False
-                        print("cat go flying")
+                        # use timeless distance equation to check if max y value is enough to "jump" out of the cart
+                        # vf^2 = vi^2 + 2ad where vf = 0, 0 = vi^2 - 2gd, 2gd = vi^2, d = vi^2/(2g)
+                        # must multiply by "dx" because in this program, dx is used to adjust the scale of values in each loop
+                        # NOTE: cart also moves upward so find the point the cat is above at that time and thats the y position of the cart
+                        exit_velocity = velocity * vec(cos(cat.angle), sin(cat.angle), 0)
+                        distance_upward = ((exit_velocity.y * dx)**2)/(2 * g)
+                        future_x = cat.pos.x + (exit_velocity.y/g) * exit_velocity.x
                         
-                        cat.velocity = velocity * vec(cos(cat.angle), sin(cat.angle), 0)
+                        above_point = None
+                        for k in range(len(cart_path)):
+                            p = cart_path[k]
+                            if p.x > future_x:
+                                above_point = p
+                                break
+                        
+                        if distance_upward < (cart.height + above_point.y - cart.pos.y):
+                            if not cat.has_said_feeling:
+                                print("~meow, cat feel light")
+                                cat.has_said_feeling = True
+                        else:
+                            cat.in_cart = False
+                            print("cat go flying")
+                            
+                            cat.velocity = exit_velocity
                 
             cart.pos = p2
             if cat.in_cart:
@@ -303,6 +347,17 @@ while True:
                 break
         if not reset:
             path_completed = True
+        
+            while not cat.grounded:
+                rate(1/dt)
+                
+                cat.pos += cat.velocity * dt * dx
+                cat.velocity -= g * vec(0, 1, 0) * dt
+                
+                if cat.pos.y < 0:
+                    break
+            cat.visible = False
+            print("cat exploded")
         else:
             reset = False
     else:

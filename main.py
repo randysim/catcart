@@ -320,15 +320,9 @@ while True:
                         exit_velocity = velocity * vec(cos(cat.angle), sin(cat.angle), 0)
                         distance_upward = ((exit_velocity.y * dx)**2)/(2 * g)
                         future_x = cat.pos.x + (exit_velocity.y/g) * exit_velocity.x
-                        
-                        above_point = None
-                        for k in range(len(cart_path)):
-                            p = cart_path[k]
-                            if p.x > future_x:
-                                above_point = p
-                                break
-                        
-                        if distance_upward < (cart.height + above_point.y - cart.pos.y):
+                            
+                        # if no abovepoint, it means the cat went REALLY REALLY far
+                        if distance_upward < (cart.height + cat.height/2):
                             if not cat.has_said_feeling:
                                 print("~meow, cat feel light")
                                 cat.has_said_feeling = True

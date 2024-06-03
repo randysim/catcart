@@ -186,11 +186,14 @@ def reset_scene():
     path_completed = False
     reset = True
 def set_left_curve(evt):
-    global left_curve_amount
+    global left_curve_amount, left_curve_text
     left_curve_amount = evt.value
+    left_curve_text.text = 'left curve: {:1.2f}'.format(evt.value)
+    
     reset_scene()
-reset_button = button(text='reset', bind=reset_scene)
+reset_button = button(text='reset', bind=reset_scene, pos=scene.title_anchor)
 left_curve_slider = slider(min=0.5, max=3, value=left_curve_amount, bind=set_left_curve)
+left_curve_text = wtext(text='left curve: {:1.2f}'.format(left_curve_slider.value))
 
 # persistent variables
 reset = False

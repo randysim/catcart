@@ -195,6 +195,8 @@ reset_button = button(text='reset', bind=reset_scene, pos=scene.title_anchor)
 left_curve_slider = slider(min=0.5, max=3, value=left_curve_amount, bind=set_left_curve)
 left_curve_text = wtext(text='left curve: {:1.2f}'.format(left_curve_slider.value))
 
+scene.append_to_caption('\n')
+
 # persistent variables
 reset = False
 path_completed = False
@@ -305,7 +307,6 @@ while True:
                         is_intersect, above_points = path_intersect(cart_path, cat)
                         
                         if is_intersect:
-                            print("cat died")
                             cat.grounded = True
                         
                 elif circle_range['start'] < cat.pos.x and cat.pos.x < circle_range['end'] and not cat.grounded:
@@ -327,11 +328,9 @@ while True:
                         # if no abovepoint, it means the cat went REALLY REALLY far
                         if distance_upward < (cart.height + cat.height/2):
                             if not cat.has_said_feeling:
-                                print("~meow, cat feel light")
                                 cat.has_said_feeling = True
                         else:
                             cat.in_cart = False
-                            print("cat go flying")
                             
                             cat.velocity = exit_velocity
                 

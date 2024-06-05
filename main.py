@@ -135,6 +135,8 @@ def generate_line(p1, p2, num_points=10, starting_pos=None):
 def generate_path(components):
     points = []
     c_ranges = []
+    settings = {} # settings for each segment of the path
+    
     for i in range(len(components)):
         component = components[i]
         starting_pos = None
@@ -143,6 +145,21 @@ def generate_path(components):
 
         if component['type'] == 'LEFT_CURVE':
             points += generate_left_curve(component['initial_height'], starting_pos=starting_pos)
+            
+            if not component.get('rendered_settings'):
+                initial_height_text = wtext(text='initial height: {:1.2f}'.format(component['initial_height']))
+                # 2nd parameter is to "capture" i into this iteration of the function
+                def update_initial_height(evt, i=i):
+                    nonlocal components, initial_height_text # like "global" but raises scope to next non-global scope
+                    components[i]['initial_height'] = evt.value
+                    initial_height_text.text = 'initial height: {:1.2f}'.format(evt.value)
+                    
+                    reset_scene()
+                
+                settings[i] = {
+                    'initial_height_slider': slider(min=0.5, max=10, value=component['initial_height'], bind=update_initial_height)
+                }
+                component['rendered_settings'] = True
         elif component['type'] == 'LINE':
             points += generate_line(vec(0, 0, 0), component['vector'], starting_pos=starting_pos)
         elif component['type'] == 'HILL':
@@ -150,7 +167,7 @@ def generate_path(components):
             points += hill_path
             c_ranges += hill_top
             
-    return (points, c_ranges)
+    return (points, c_ranges, settings)
 
 # OBJECT GENERATION LOGIC ============
 # - default created invisible, make visible later
@@ -185,7 +202,8 @@ def generate_cat():
 
 # USER INPUT ==========================
 def reset_scene():
-    global reset, cart, cat, path_completed, path_curve, cart_path, centripetal_parts, path_components
+    global reset, cart, cat, path_completed, path_curve, cart_path, centripetal_parts, path_components, settings
+    
     cart.visible = False
     cat.visible = False
     path_curve.visible = False
@@ -204,8 +222,6 @@ def set_initial_height(evt):
     
     reset_scene()
 reset_button = button(text='reset', bind=reset_scene, pos=scene.title_anchor)
-initial_height_slider = slider(min=0.5, max=10, value=initial_height, bind=set_initial_height)
-initial_height_text = wtext(text='initial height: {:1.2f}'.format(initial_height_slider.value))
 
 scene.append_to_caption('\n')
 
@@ -232,7 +248,7 @@ path_components = [
     { 'type': 'HILL', 'percent_semi_circle': 0.96, 'radius': 1, 'hill_height': 2 },
     { 'type': 'LINE', 'vector': vec(3, 0, 0) }
 ]
-cart_path, circle_parts = generate_path(path_components)
+cart_path, circle_parts, settings = generate_path(path_components)
 path_curve = curve(pos=cart_path)
 
 while True:
@@ -275,11 +291,15 @@ while True:
                 cart.direction = 1
                 cart.kinetic_energy = initial_kinetic_energy
             
-            if cart.pos.x > circle_parts[ci]['end'] and ci < len(circle_parts):
+            if cart.pos.x > circle_parts[ci]['end'] and ci < len(circle_parts)-1:
                 ci += 1
             
             p1 = cart_path[i]
             p2 = cart_path[i+cart.direction]
+            # skip if two points are the same
+            if p1.x == p2.x and p1.y == p2.y:
+                i += cart.direction
+                continue
             
             going_down = p1.y > p2.y
             

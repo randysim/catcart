@@ -99,7 +99,7 @@ def generate_hill(percent_semi_circle, radius, hill_height, starting_pos=None, y
             offset = starting_pos - c_points[i]
             c_points[i] = starting_pos
             
-    return (c_points, { 'start': c_start + offset.x, 'end': c2_start + offset.x, 'type': "HILL", 'center': vec(x_coord + offset.x, y_coord + offset.y, 0) })
+    return (c_points, { 'start': c_start + offset.x, 'end': c2_start + offset.x, 'type': "HILL", 'center': vec(x_coord + offset.x, y_coord + offset.y, 0), 'radius': radius  })
 
 def generate_left_curve(initial_height, starting_pos=None):
     c_points = []
@@ -438,7 +438,7 @@ while True:
                         
                 elif circle_parts[ci]['start'] < cat.pos.x and cat.pos.x < circle_parts[ci]['end'] and not cat.grounded:
                     # centripetal force calculation here
-                    centrifugal_force = cat.weight * velocity ** 2 / hill_radius
+                    centrifugal_force = cat.weight * velocity ** 2 / circle_parts[ci]['radius']
                     gravity_normal = vec(0, 1, 0)
                     center_to_cat = norm(cat.pos - circle_parts[ci]['center'])
                     centripetal_force = cat.weight * g * abs(dot(gravity_normal, center_to_cat))

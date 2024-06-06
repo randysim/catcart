@@ -4,6 +4,7 @@ scene.autoscale = False
 scene.range = 4
 scene.center = vec(2.5, 0.5, 0)
 DEBUG = True
+point_every = 0.05
 
 # HELPFUL MATH FUNCTIONS ======================
 
@@ -55,7 +56,7 @@ def path_intersect(path, cat):
 # - LINE
 # - LEFT_CURVE
 
-def generate_hill(percent_semi_circle, radius, hill_height, num_points=150, starting_pos=None, y_coord=0, x_coord=0):
+def generate_hill(percent_semi_circle, radius, hill_height, starting_pos=None, y_coord=0, x_coord=0):
     c_points = []
     circle_range = sqrt(radius) * percent_semi_circle # how much to the left and right to draw the "circle"
     c1_start = x_coord-(radius+circle_range) # start of the first curve
@@ -63,6 +64,7 @@ def generate_hill(percent_semi_circle, radius, hill_height, num_points=150, star
     c2_start = x_coord+circle_range # start of drawing the 2nd curve
     
     hill_width = (radius+circle_range)-c1_start
+    num_points = int(1.5 * hill_width/point_every)
     offset = vec(0, 0, 0)
     
     for i in range(num_points):
@@ -99,11 +101,13 @@ def generate_hill(percent_semi_circle, radius, hill_height, num_points=150, star
             
     return (c_points, { 'start': c_start + offset.x, 'end': c2_start + offset.x, 'type': "HILL", 'center': vec(x_coord + offset.x, y_coord + offset.y, 0) })
 
-def generate_left_curve(initial_height, num_points=50, starting_pos=None):
+def generate_left_curve(initial_height, starting_pos=None):
     c_points = []
     left_curve_amount = sqrt(initial_height)
+    num_points = int(left_curve_amount/point_every)
     cx = -left_curve_amount
     dx = left_curve_amount/(num_points-1)
+    
     i = 0
     offset = vec(0, 0, 0)
         
@@ -117,7 +121,8 @@ def generate_left_curve(initial_height, num_points=50, starting_pos=None):
     return c_points
     
     
-def generate_line(p1, p2, num_points=10, starting_pos=None):
+def generate_line(p1, p2, starting_pos=None):
+    num_points = int((p2.x-p1.x)/point_every) + 1
     slope = (p2 - p1)/(num_points - 1)
     ps = [p1]
     
@@ -175,8 +180,8 @@ def generate_path(components):
                 
                 component['rendered_settings'] = True
                 scene.append_to_caption('\n')
+                
         elif component['type'] == 'LINE':
-            print(starting_pos)
             points += generate_line(vec(0, 0, 0), component['vector'], starting_pos=starting_pos)
             
             if not component.get('rendered_settings'):
@@ -195,7 +200,7 @@ def generate_path(components):
                     components[i]['vector'].y = float(evt.value)
                     settings[i]['y_direction_text'].text = "Y: {:1.2f}".format(evt.value)
                     reset_scene()
-                y_direction_slider = slider(min=0, max=10, value=component['vector'].y, bind=update_y)
+                y_direction_slider = slider(min=-10, max=10, value=component['vector'].y, bind=update_y)
                 
                 settings[i] = {
                     'path_label': path_label,
@@ -249,24 +254,19 @@ def generate_cat():
 
 # USER INPUT ==========================
 def reset_scene():
-    global reset, cart, cat, path_completed, path_curve, cart_path, centripetal_parts, path_components
+    global reset, cart, cat, path_completed, path_curve, cart_path, circle_parts, path_components
     cart.visible = False
     cat.visible = False
     path_curve.visible = False
     
-    cart_path, centripetal_parts = generate_path(path_components)
+    cart_path, circle_parts, settings = generate_path(path_components)
     path_curve = curve(pos=cart_path)
     
     cart = generate_cart()
     cat = generate_cat()
     path_completed = False
     reset = True
-def set_initial_height(evt):
-    global initial_height, initial_height_text
-    initial_height = evt.value
-    initial_height_text.text = 'initial height: {:1.2f}'.format(evt.value)
-    
-    reset_scene()
+
 reset_button = button(text='reset', bind=reset_scene, pos=scene.title_anchor)
 
 # VARIABLES ==========================================
@@ -365,7 +365,6 @@ while True:
                 
             cart.angle = angle
             
-            percent_travel = dx/mag(p2-p1) # how much progress of the path should each iteration make, this is to prevent reliance on # of points in path
             rs = False
             while cart.pos.x < p2.x if cart.direction > 0 else cart.pos.x > p2.x:
                 rate(1/dt)
@@ -379,7 +378,7 @@ while True:
                     apparent_weight += cat.weight
                 
                 velocity = sqrt((2 * abs(cart.kinetic_energy))/apparent_weight)
-                cart.pos += (p2-p1) * velocity * dt * percent_travel
+                cart.pos += norm(p2-p1) * dx * velocity * dt
                 
                 if cat.in_cart:
                     update_cat(cart, cat, p1, p2)
@@ -419,7 +418,7 @@ while True:
                         future_x = cat.pos.x + (exit_velocity.y/g) * exit_velocity.x
                             
                         # if no abovepoint, it means the cat went REALLY REALLY far
-                        if distance_upward < (cart.height + cat.height/2):
+                        if distance_upward < (cart.height + cat.height/3):
                             if not cat.has_said_feeling:
                                 if DEBUG:
                                     print("cat feel light")

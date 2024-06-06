@@ -160,79 +160,85 @@ def generate_path(components):
         if component['type'] == 'LEFT_CURVE':
             points += generate_left_curve(component['initial_height'], starting_pos=starting_pos)
             
-            path_label = wtext(text=str(i) + ') left curve ') 
-            initial_height_text = wtext(text='initial height: {:1.2f}'.format(component['initial_height']))
-            # 2nd parameter is to "capture" i into this iteration of the function
-            def update_initial_height(evt, i=i):
-                nonlocal components, initial_height_text # like "global" but raises scope to next non-global scope
-                components[i]['initial_height'] = evt.value
-                initial_height_text.text = 'initial height: {:1.2f}'.format(evt.value)
+            if not component.get('rendered_settings'):
+                path_label = wtext(text=str(i) + ') left curve ') 
+                initial_height_text = wtext(text='initial height: {:1.2f}'.format(component['initial_height']))
+                # 2nd parameter is to "capture" i into this iteration of the function
+                def update_initial_height(evt, i=i):
+                    nonlocal components, initial_height_text # like "global" but raises scope to next non-global scope
+                    components[i]['initial_height'] = evt.value
+                    initial_height_text.text = 'initial height: {:1.2f}'.format(evt.value)
+                    
+                    reset_scene()
                 
-                reset_scene()
-            
-            settings[i] = {
-                'path_label': path_label,
-                'initial_height_slider': slider(min=0.5, max=10, value=component['initial_height'], bind=update_initial_height),
-                'initial_height_text': initial_height_text,
-                'delete_button': button(bind=delete_segment, text="delete")
-            }
-            
-            scene.append_to_caption('\n')
+                settings[i] = {
+                    'path_label': path_label,
+                    'initial_height_slider': slider(min=0.5, max=10, value=component['initial_height'], bind=update_initial_height),
+                    'initial_height_text': initial_height_text,
+                    'delete_button': button(bind=delete_segment, text="delete")
+                }
+                
+                component['rendered_settings'] = True
+                scene.append_to_caption('\n')
                 
         elif component['type'] == 'LINE':
             points += generate_line(vec(0, 0, 0), component['vector'], starting_pos=starting_pos)
             
-            path_label = wtext(text=str(i) + ') line ') 
-            x_direction_text = wtext(text="X: {:1.2f}".format(component['vector'].x))
-            def update_x(evt, i=i):
-                nonlocal components, settings
-                components[i]['vector'].x = float(evt.value)
-                settings[i]['x_direction_text'].text = "X: {:1.2f}".format(evt.value)
-                reset_scene()
-            x_direction_slider = slider(min=0, max=10, value=component['vector'].x, bind=update_x)
-            
-            y_direction_text = wtext(text="Y: {:1.2f}".format(component['vector'].y))
-            def update_y(evt, i=i):
-                nonlocal components, settings
-                components[i]['vector'].y = float(evt.value)
-                settings[i]['y_direction_text'].text = "Y: {:1.2f}".format(evt.value)
-                reset_scene()
-            y_direction_slider = slider(min=-10, max=10, value=component['vector'].y, bind=update_y)
-            
-            settings[i] = {
-                'path_label': path_label,
-                'x_direction_text': x_direction_text,
-                'y_direction_text': y_direction_text,
-                'x_direction_slider': x_direction_slider,
-                'y_direction_slider': y_direction_slider,
-                'delete_button': button(bind=delete_segment, text="delete")
-            }
+            if not component.get('rendered_settings'):
+                path_label = wtext(text=str(i) + ') line ') 
+                x_direction_text = wtext(text="X: {:1.2f}".format(component['vector'].x))
+                def update_x(evt, i=i):
+                    nonlocal components, settings
+                    components[i]['vector'].x = float(evt.value)
+                    settings[i]['x_direction_text'].text = "X: {:1.2f}".format(evt.value)
+                    reset_scene()
+                x_direction_slider = slider(min=0, max=10, value=component['vector'].x, bind=update_x)
                 
-            scene.append_to_caption('\n')
+                y_direction_text = wtext(text="Y: {:1.2f}".format(component['vector'].y))
+                def update_y(evt, i=i):
+                    nonlocal components, settings
+                    components[i]['vector'].y = float(evt.value)
+                    settings[i]['y_direction_text'].text = "Y: {:1.2f}".format(evt.value)
+                    reset_scene()
+                y_direction_slider = slider(min=-10, max=10, value=component['vector'].y, bind=update_y)
+                
+                settings[i] = {
+                    'path_label': path_label,
+                    'x_direction_text': x_direction_text,
+                    'y_direction_text': y_direction_text,
+                    'x_direction_slider': x_direction_slider,
+                    'y_direction_slider': y_direction_slider,
+                    'delete_button': button(bind=delete_segment, text="delete")
+                }
+                
+                component['rendered_settings'] = True
+                scene.append_to_caption('\n')
                 
         elif component['type'] == 'HILL':
             hill_path, hill_top = generate_hill(component['percent_semi_circle'], component['radius'], component['hill_height'], starting_pos=starting_pos)
             points += hill_path
             c_ranges += hill_top
             
-            hill_label = wtext(text=str(i) + ") hill ")
-            
-            radius_text = wtext(text="radius: {:1.2f}".format(component['radius']))
-            def update_radius(evt, i=i):
-                nonlocal components, settings
-                components[i]['radius'] = float(evt.value)
-                settings[i]['radius_text'].text = "radius: {:1.2f}".format(evt.value)
-                reset_scene()
+            if not component.get('rendered_settings'):
+                hill_label = wtext(text=str(i) + ") hill ")
                 
-            radius_slider = slider(min=0.5, max=2, value=components[i]['radius'], bind=update_radius)
-            
-            settings[i] = {
-                'radius_text': radius_text,
-                'radius_slider': radius_slider,
-                'delete_button': button(bind=delete_segment, text="delete")
-            }
-            
-            scene.append_to_caption('\n')
+                radius_text = wtext(text="radius: {:1.2f}".format(component['radius']))
+                def update_radius(evt, i=i):
+                    nonlocal components, settings
+                    components[i]['radius'] = float(evt.value)
+                    settings[i]['radius_text'].text = "radius: {:1.2f}".format(evt.value)
+                    reset_scene()
+                    
+                radius_slider = slider(min=0.5, max=2, value=components[i]['radius'], bind=update_radius)
+                
+                settings[i] = {
+                    'radius_text': radius_text,
+                    'radius_slider': radius_slider,
+                    'delete_button': button(bind=delete_segment, text="delete")
+                }
+                
+                component['rendered_settings'] = True
+                scene.append_to_caption('\n')
             
     return (points, c_ranges, settings)
 
@@ -270,7 +276,6 @@ def generate_cat():
 # USER INPUT ==========================
 def reset_scene():
     global reset, cart, cat, path_completed, path_curve, cart_path, circle_parts, path_components
-    scene.caption = ''
     cart.visible = False
     cat.visible = False
     path_curve.visible = False
@@ -473,6 +478,3 @@ while True:
         rate(1/dt)
             
     
-
-
-

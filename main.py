@@ -127,7 +127,7 @@ def generate_line(p1, p2, num_points=10, starting_pos=None):
         ps[0] = starting_pos
         
     for i in range(1, num_points):
-        ps.append(ps[i-1] + slope + offset)
+        ps.append(ps[i-1] + slope)
             
     return ps
     
@@ -142,11 +142,21 @@ def generate_path(components):
         starting_pos = None
         if i != 0:
             starting_pos = points[-1]
+        
+        def delete_segment(evt, i=i):
+            nonlocal settings, components
+            for widget in settings[i].values():
+                widget.delete()
+            settings.pop(i)
+            components.pop(i)
+            
+            reset_scene()
 
         if component['type'] == 'LEFT_CURVE':
             points += generate_left_curve(component['initial_height'], starting_pos=starting_pos)
             
             if not component.get('rendered_settings'):
+                path_label = wtext(text=str(i) + ') left curve ') 
                 initial_height_text = wtext(text='initial height: {:1.2f}'.format(component['initial_height']))
                 # 2nd parameter is to "capture" i into this iteration of the function
                 def update_initial_height(evt, i=i):
@@ -157,11 +167,48 @@ def generate_path(components):
                     reset_scene()
                 
                 settings[i] = {
-                    'initial_height_slider': slider(min=0.5, max=10, value=component['initial_height'], bind=update_initial_height)
+                    'path_label': path_label,
+                    'initial_height_slider': slider(min=0.5, max=10, value=component['initial_height'], bind=update_initial_height),
+                    'initial_height_text': initial_height_text,
+                    'delete_button': button(bind=delete_segment, text="delete")
                 }
+                
                 component['rendered_settings'] = True
+                scene.append_to_caption('\n')
         elif component['type'] == 'LINE':
+            print(starting_pos)
             points += generate_line(vec(0, 0, 0), component['vector'], starting_pos=starting_pos)
+            
+            if not component.get('rendered_settings'):
+                path_label = wtext(text=str(i) + ') line ') 
+                x_direction_text = wtext(text="X: {:1.2f}".format(component['vector'].x))
+                def update_x(evt, i=i):
+                    nonlocal components, settings
+                    components[i]['vector'].x = float(evt.value)
+                    settings[i]['x_direction_text'].text = "X: {:1.2f}".format(evt.value)
+                    reset_scene()
+                x_direction_slider = slider(min=0, max=10, value=component['vector'].x, bind=update_x)
+                
+                y_direction_text = wtext(text="Y: {:1.2f}".format(component['vector'].y))
+                def update_y(evt, i=i):
+                    nonlocal components, settings
+                    components[i]['vector'].y = float(evt.value)
+                    settings[i]['y_direction_text'].text = "Y: {:1.2f}".format(evt.value)
+                    reset_scene()
+                y_direction_slider = slider(min=0, max=10, value=component['vector'].y, bind=update_y)
+                
+                settings[i] = {
+                    'path_label': path_label,
+                    'x_direction_text': x_direction_text,
+                    'y_direction_text': y_direction_text,
+                    'x_direction_slider': x_direction_slider,
+                    'y_direction_slider': y_direction_slider,
+                    'delete_button': button(bind=delete_segment, text="delete")
+                }
+                
+                component['rendered_settings'] = True
+                scene.append_to_caption('\n')
+                
         elif component['type'] == 'HILL':
             hill_path, hill_top = generate_hill(component['percent_semi_circle'], component['radius'], component['hill_height'], starting_pos=starting_pos)
             points += hill_path
@@ -202,8 +249,7 @@ def generate_cat():
 
 # USER INPUT ==========================
 def reset_scene():
-    global reset, cart, cat, path_completed, path_curve, cart_path, centripetal_parts, path_components, settings
-    
+    global reset, cart, cat, path_completed, path_curve, cart_path, centripetal_parts, path_components
     cart.visible = False
     cat.visible = False
     path_curve.visible = False
@@ -222,8 +268,6 @@ def set_initial_height(evt):
     
     reset_scene()
 reset_button = button(text='reset', bind=reset_scene, pos=scene.title_anchor)
-
-scene.append_to_caption('\n')
 
 # VARIABLES ==========================================
 # path variables
@@ -246,7 +290,7 @@ path_components = [
     { 'type': 'LEFT_CURVE', 'initial_height': initial_height },
     { 'type': 'LINE', 'vector': vec(2, 0, 0) },
     { 'type': 'HILL', 'percent_semi_circle': 0.96, 'radius': 1, 'hill_height': 2 },
-    { 'type': 'LINE', 'vector': vec(3, 0, 0) }
+    { 'type': 'LINE', 'vector': vec(2, 0, 0) }
 ]
 cart_path, circle_parts, settings = generate_path(path_components)
 path_curve = curve(pos=cart_path)
@@ -254,9 +298,11 @@ path_curve = curve(pos=cart_path)
 while True:
     if not path_completed:
         # set scene
+        """
         scene.autoscale = False
         scene.range = 4
         scene.center = vec(2.5, 0.5, 0)
+        """
         
         # object variables
         initial_height = cart_path[0].y

@@ -219,6 +219,27 @@ def generate_path(components):
             points += hill_path
             c_ranges += hill_top
             
+            if not component.get('rendered_settings'):
+                hill_label = wtext(text=str(i) + ") hill ")
+                
+                radius_text = wtext(text="radius: {:1.2f}".format(component['radius']))
+                def update_radius(evt, i=i):
+                    nonlocal components, settings
+                    components[i]['radius'] = float(evt.value)
+                    settings[i]['radius_text'].text = "radius: {:1.2f}".format(evt.value)
+                    reset_scene()
+                    
+                radius_slider = slider(min=0.5, max=2, value=components[i]['radius'], bind=update_radius)
+                
+                settings[i] = {
+                    'radius_text': radius_text,
+                    'radius_slider': radius_slider,
+                    'delete_button': button(bind=delete_segment, text="delete")
+                }
+                
+                component['rendered_settings'] = True
+                scene.append_to_caption('\n')
+            
     return (points, c_ranges, settings)
 
 # OBJECT GENERATION LOGIC ============

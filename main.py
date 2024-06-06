@@ -372,7 +372,7 @@ while True:
                 cart.direction = 1
                 cart.kinetic_energy = initial_kinetic_energy
             
-            if cart.pos.x > circle_parts[ci]['end'] and ci < len(circle_parts)-1:
+            if ci < len(circle_parts) and cart.pos.x > circle_parts[ci]['end']:
                 ci += 1
             
             p1 = cart_path[i]
@@ -436,7 +436,7 @@ while True:
                                 print("cat hit ground")
                             cat.grounded = True
                         
-                elif circle_parts[ci]['start'] < cat.pos.x and cat.pos.x < circle_parts[ci]['end'] and not cat.grounded:
+                elif ci < len(circle_parts) and circle_parts[ci]['start'] < cat.pos.x and cat.pos.x < circle_parts[ci]['end'] and not cat.grounded:
                     # centripetal force calculation here
                     centrifugal_force = cat.weight * velocity ** 2 / circle_parts[ci]['radius']
                     gravity_normal = vec(0, 1, 0)

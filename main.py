@@ -155,6 +155,7 @@ def generate_path(components):
             settings.pop(i)
             components.pop(i)
             
+            reset_widgets()
             reset_scene()
 
         if component['type'] == 'LEFT_CURVE':
@@ -287,13 +288,26 @@ def reset_scene():
     cat = generate_cat()
     path_completed = False
     reset = True
+def reset_widgets():
+    global path_components
+    scene.caption = ""
+    for component in path_components:
+        component['rendered_settings'] = False
+def reset_path():
+    global path_components
+    path_components = [
+        { 'type': 'LEFT_CURVE', 'initial_height': 2 },
+        { 'type': 'LINE', 'vector': vec(2, 0, 0) },
+        { 'type': 'HILL', 'percent_semi_circle': 0.96, 'radius': 1, 'hill_height': 2 },
+        { 'type': 'LINE', 'vector': vec(2, 0, 0) }
+    ]
+    reset_widgets()
+    reset_scene()
 
 reset_button = button(text='reset', bind=reset_scene, pos=scene.title_anchor)
+reset_path = button(text='reset path', bind=reset_path, pos=scene.title_anchor)
 
 # VARIABLES ==========================================
-# path variables
-initial_height = 2
-hill_radius = 1
 
 # physics variables
 dt = 0.01
@@ -308,7 +322,7 @@ cat = generate_cat()
 
 # path variables
 path_components = [
-    { 'type': 'LEFT_CURVE', 'initial_height': initial_height },
+    { 'type': 'LEFT_CURVE', 'initial_height': 2 },
     { 'type': 'LINE', 'vector': vec(2, 0, 0) },
     { 'type': 'HILL', 'percent_semi_circle': 0.96, 'radius': 1, 'hill_height': 2 },
     { 'type': 'LINE', 'vector': vec(2, 0, 0) }

@@ -509,7 +509,7 @@ while True:
             if i == 0 and cart.direction < 0:
                 cart.kinetic_energy = initial_kinetic_energy
             
-            if ci < len(circle_parts) and cart.pos.x > circle_parts[ci]['end']:
+            if ci < len(circle_parts) and i >= circle_parts[ci]['end']:
                 ci += 1
                 cat.has_said_feeling = False
             
@@ -528,8 +528,7 @@ while True:
                 angle *= -1
             if p1.x > p2.x:
                 if on_loop and cart.direction > 0:
-                    angle = 2 * pi - angle
-                    angle *= -1
+                    pass
                 else:
                     angle += pi
             else:

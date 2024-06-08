@@ -339,6 +339,24 @@ def generate_path(components):
             points += loop_path
             c_ranges += [loop_range]
             
+            if not component.get('rendered_settings'):
+                loop_label = wtext(text=str(i) + ") loop ")
+                radius_text = wtext(text="radius: {:1.2f}".format(component['radius']))
+                def update_radius(evt, i=i):
+                    nonlocal components, settings
+                    components[i]['radius'] = float(evt.value)
+                    settings[i]['radius_text'].text = "radius: {:1.2f}".format(evt.value)
+                    reset_scene()
+                radius_slider = slider(min=0.5, max=3, value=components[i]['radius'], bind=update_radius)
+                
+                settings[i] = {
+                    'loop_label': loop_label,
+                    'radius_text': radius_text,
+                    'radius_slider': radius_slider
+                }
+                component['rendered_settings'] = True
+                scene.append_to_caption('\n')
+            
             
             
     return (points, c_ranges, settings)
@@ -410,6 +428,7 @@ def reset_path():
         { 'type': 'LEFT_CURVE', 'initial_height': 2 },
         { 'type': 'LINE', 'vector': vec(2, 0, 0) },
         { 'type': 'HILL', 'percent_semi_circle': 0.96, 'radius': 1, 'hill_height': 2 },
+        { 'type': 'DIP', 'curvature': 6.1, 'height': 0.5 },
         { 'type': 'LINE', 'vector': vec(2, 0, 0) },
         { 'type': 'LOOP', 'radius': 1 }
     ]

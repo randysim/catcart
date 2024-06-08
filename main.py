@@ -141,7 +141,25 @@ def generate_line(p1, p2, starting_pos=None):
         ps.append(ps[i-1] + slope)
             
     return ps
+ 
+def generate_dip(curvature, height, starting_pos=None):
+    width = 1
+    num_points = width/point_every + 1
+    cx = -width/2
+    dx = width/(num_points-1)
     
+    c_points = []
+    offset = vec(0, 0, 0)
+    
+    for i in range(num_points):
+        cy = -height/(1 + exp(1)**(-curvature * cx))
+        c_points.append(vec(cx, cy, 0) + offset)
+        
+        if i == 0 and starting_pos:
+            offset = starting_pos - c_points[i]
+            c_points[i] = starting_pos
+        cx += dx
+    return c_points
 
 def generate_path(components):
     points = []
@@ -246,6 +264,8 @@ def generate_path(components):
                 
                 component['rendered_settings'] = True
                 scene.append_to_caption('\n')
+        elif component['type'] == 'DIP':
+            points += generate_dip(component['curvature'], component['height'], starting_pos=starting_pos)
             
     return (points, c_ranges, settings)
 
@@ -366,6 +386,7 @@ path_components = [
     { 'type': 'LEFT_CURVE', 'initial_height': 2 },
     { 'type': 'LINE', 'vector': vec(2, 0, 0) },
     { 'type': 'HILL', 'percent_semi_circle': 0.96, 'radius': 1, 'hill_height': 2 },
+    { 'type': 'DIP', 'curvature': 6.1, 'height': 0.5 },
     { 'type': 'LINE', 'vector': vec(2, 0, 0) }
 ]
 cart_path, circle_parts, settings = generate_path(path_components)
@@ -460,7 +481,12 @@ while True:
                 
                 cart.kinetic_energy = g * apparent_weight * (initial_height - cart.pos.y)
                 
-                change_direction = cart.kinetic_energy < 0
+                if not change_direction and cart.kinetic_energy < 0:
+                    change_direction = True
+                    cart.direction *= -1
+                    temp = p2
+                    p2 = p1
+                    p1 = temp
                 
                 if not cat.in_cart:
                     # kinematics here
@@ -506,8 +532,6 @@ while True:
             cart.pos = p2
             if cat.in_cart:
                 update_cat(cart, cat, p1, p2)
-            if change_direction:
-                cart.direction *= -1
                 
             i += cart.direction
             if rs:

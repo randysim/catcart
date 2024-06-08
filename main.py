@@ -30,7 +30,10 @@ def get_perpendicular(p1, p2):
     return perp_dir
 
 def update_cat(cart, cat, p1, p2):
-    cat.pos = cart.pos + get_perpendicular(p1, p2) * 0.2 * cart.direction
+    direction = 1
+    if p1.x > p2.x:
+        direction = -1
+    cat.pos = cart.pos + get_perpendicular(p1, p2) * 0.2 * direction
 
 def get_points_above(path, cat):
     for i in range(len(path)):

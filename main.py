@@ -40,6 +40,9 @@ def get_points_above(path, cat):
             
 def path_intersect(path, cat):
     above_points = get_points_above(path, cat)
+    if not above_points:
+        return (False, None)
+    
     avg_y = (above_points[0].y + above_points[1].y)/2
     threshold = 0.001
     
@@ -275,37 +278,71 @@ def generate_cat():
     return cat
 
 # USER INPUT ==========================
-def reset_scene():
-    global reset, cart, cat, path_completed, path_curve, cart_path, circle_parts, path_components
+def reset_scene(update_settings=False):
+    global reset, cart, cat, path_completed, path_curve, cart_path, circle_parts, path_components, running, toggle_button, settings
     cart.visible = False
     cat.visible = False
     path_curve.visible = False
     
-    cart_path, circle_parts, settings = generate_path(path_components)
+    if update_settings:
+        reset_widgets()
+        cart_path, circle_parts, settings = generate_path(path_components)
+    else:
+        cart_path, circle_parts, _ = generate_path(path_components)
+    
     path_curve = curve(pos=cart_path)
     
     cart = generate_cart()
     cat = generate_cat()
+    running = False
     path_completed = False
-    reset = True
+    toggle_button.text = 'run cat'
+    
+    # enable widgets again
+    set_widgets(disabled=False)
+    
 def reset_widgets():
     global path_components
     scene.caption = ""
     for component in path_components:
         component['rendered_settings'] = False
+    
 def reset_path():
-    global path_components
+    global path_components, toggle_button
     path_components = [
         { 'type': 'LEFT_CURVE', 'initial_height': 2 },
         { 'type': 'LINE', 'vector': vec(2, 0, 0) },
         { 'type': 'HILL', 'percent_semi_circle': 0.96, 'radius': 1, 'hill_height': 2 },
         { 'type': 'LINE', 'vector': vec(2, 0, 0) }
     ]
-    reset_widgets()
-    reset_scene()
+    
+    reset_scene(update_settings=True)
+    
+    
+def set_widgets(disabled):
+    global settings
+    
+    for setting in settings.values():
+        for widget in setting.values():
+            if widget.disabled == True or widget.disabled == False:
+                widget.disabled = disabled
 
-reset_button = button(text='reset', bind=reset_scene, pos=scene.title_anchor)
+def run(evt):
+    global running, toggle_button
+    
+    if evt.text == 'run cat':
+        running = True
+        evt.text = 'stop cat'
+        
+        # disable widgets
+        set_widgets(disabled=True)
+    elif evt.text == 'stop cat':
+        
+        reset_scene(update_settings=True)
+
+toggle_button = button(text='run cat', bind=run, pos=scene.title_anchor)
 reset_path = button(text='reset path', bind=reset_path, pos=scene.title_anchor)
+
 
 # VARIABLES ==========================================
 
@@ -317,6 +354,7 @@ g = 9.81
 # persistent variables
 reset = False
 path_completed = False
+running = False
 cart = generate_cart()
 cat = generate_cat()
 
@@ -331,7 +369,7 @@ cart_path, circle_parts, settings = generate_path(path_components)
 path_curve = curve(pos=cart_path)
 
 while True:
-    if not path_completed:
+    if not path_completed and running:
         # set scene
         """
         scene.autoscale = False
@@ -365,7 +403,7 @@ while True:
         ci = 0 # counter for circular paths traversed
     
         while i < len(cart_path) - 1 and i >= 0:
-            if reset:
+            if not running:
                 break
             
             if i == 0 and cart.direction < 0:
@@ -400,11 +438,12 @@ while True:
                 
             cart.angle = angle
             
-            rs = False
+            rs = False # reset variable to make it reset more responsively
+
             while cart.pos.x < p2.x if cart.direction > 0 else cart.pos.x > p2.x:
                 rate(1/dt)
                 
-                if reset:
+                if not running:
                     rs = True
                     break
                 
@@ -471,7 +510,7 @@ while True:
             i += cart.direction
             if rs:
                 break
-        if not reset:
+        if running:
             path_completed = True
         
             while not cat.in_cart and not cat.grounded:
@@ -486,8 +525,8 @@ while True:
             
             if DEBUG:
                 print("cat exploded")
-        else:
-            reset = False
+            reset_scene()
+
     else:
         rate(1/dt)
             

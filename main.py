@@ -527,11 +527,13 @@ while True:
             if going_down:
                 angle *= -1
             if p1.x > p2.x:
-                if on_loop:
+                if on_loop and cart.direction > 0:
                     angle = 2 * pi - angle
-                    if cart.direction > 0:
-                        angle *= -1
+                    angle *= -1
                 else:
+                    angle += pi
+            else:
+                if on_loop and cart.direction < 0:
                     angle += pi
                     
             angle = simplify_angle(angle)

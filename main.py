@@ -175,7 +175,6 @@ def generate_loop(radius, starting_pos=None):
     
     c_points = []
     
-    # c_points += generate_line(vec(-0.4, 0, 0), vec(0, 0, 0), starting_pos=starting_pos)
     offset = vec(0, 0, 0)
     
     for i in range(num_points):
@@ -218,7 +217,7 @@ def generate_path(components):
             points += generate_left_curve(component['initial_height'], starting_pos=starting_pos)
             
             if not component.get('rendered_settings'):
-                initial_height_text = wtext(text='initial height: {:1.2f}'.format(component['initial_height']))
+                initial_height_text = wtext(text='INITIAL HEIGHT: {:1.2f}'.format(component['initial_height']))
                 # 2nd parameter is to "capture" i into this iteration of the function
                 def update_initial_height(evt, i=i):
                     nonlocal components, initial_height_text # like "global" but raises scope to next non-global scope
@@ -239,7 +238,7 @@ def generate_path(components):
             points += generate_line(vec(0, 0, 0), component['vector'], starting_pos=starting_pos)
             
             if not component.get('rendered_settings'):
-                path_label = wtext(text=str(i) + ') line ') 
+                path_label = wtext(text=str(i) + ') LINE - ') 
                 x_direction_text = wtext(text="X: {:1.2f}".format(component['vector'].x))
                 def update_x(evt, i=i):
                     nonlocal components, settings
@@ -262,7 +261,7 @@ def generate_path(components):
                     'y_direction_text': y_direction_text,
                     'x_direction_slider': x_direction_slider,
                     'y_direction_slider': y_direction_slider,
-                    'delete_button': button(bind=delete_segment, text="delete")
+                    'delete_button': button(bind=delete_segment, text="Delete", color=color.red)
                 }
                 
                 component['rendered_settings'] = True
@@ -276,7 +275,7 @@ def generate_path(components):
             c_ranges += [hill_top]
             
             if not component.get('rendered_settings'):
-                hill_label = wtext(text=str(i) + ") hill ")
+                hill_label = wtext(text=str(i) + ") HILL - ")
                 
                 radius_text = wtext(text="radius: {:1.2f}".format(component['radius']))
                 def update_radius(evt, i=i):
@@ -291,7 +290,7 @@ def generate_path(components):
                     'hill_label': hill_label,
                     'radius_text': radius_text,
                     'radius_slider': radius_slider,
-                    'delete_button': button(bind=delete_segment, text="delete")
+                    'delete_button': button(bind=delete_segment, text="Delete", color=color.red)
                 }
                 
                 component['rendered_settings'] = True
@@ -300,7 +299,7 @@ def generate_path(components):
             points += generate_dip(component['curvature'], component['height'], starting_pos=starting_pos)
             
             if not component.get('rendered_settings'):
-                dip_label = wtext(text=str(i) + ") dip ")
+                dip_label = wtext(text=str(i) + ") DIP - ")
                 curvature_text = wtext(text="radius: {:1.2f}".format(component['curvature']))
                 def update_curvature(evt, i=i):
                     nonlocal components, settings
@@ -325,7 +324,7 @@ def generate_path(components):
                     'curvature_slider': curvature_slider,
                     'height_text': height_text,
                     'height_slider': height_slider,
-                    'delete_button': button(bind=delete_segment, text="delete")
+                    'delete_button': button(bind=delete_segment, text="Delete", color=color.red)
                 }
                 
                 component['rendered_settings'] = True
@@ -338,7 +337,7 @@ def generate_path(components):
             c_ranges += [loop_range]
             
             if not component.get('rendered_settings'):
-                loop_label = wtext(text=str(i) + ") loop ")
+                loop_label = wtext(text=str(i) + ") LOOP - ")
                 radius_text = wtext(text="radius: {:1.2f}".format(component['radius']))
                 def update_radius(evt, i=i):
                     nonlocal components, settings
@@ -351,7 +350,7 @@ def generate_path(components):
                     'loop_label': loop_label,
                     'radius_text': radius_text,
                     'radius_slider': radius_slider,
-                    'delete_button': button(bind=delete_segment, text="delete")
+                    'delete_button': button(bind=delete_segment, text="Delete", color=color.red)
                 }
                 component['rendered_settings'] = True
                 scene.append_to_caption('\n\n')
@@ -400,6 +399,7 @@ def reset_scene(update_settings=False):
         reset_widgets()
         component_menu = menu(choices=component_types, bind=update_selection)
         component_menu.selected = selected_component
+        scene.append_to_caption(" ")
         add_component_button = button(text="Add Component", bind=add_component)
         scene.append_to_caption("\n\n")
         cart_path, circle_parts, settings = generate_path(path_components)
@@ -438,7 +438,10 @@ def reset_path():
     
     
 def set_widgets(disabled):
-    global settings
+    global settings, component_menu, add_component_button
+    
+    component_menu.disabled = disabled
+    add_component_button.disabled = disabled
     
     for setting in settings.values():
         for widget in setting.values():
@@ -451,14 +454,16 @@ def run(evt):
     if evt.text == 'run cat':
         running = True
         evt.text = 'stop cat'
+        evt.background = color.red
         
         # disable widgets
         set_widgets(disabled=True)
     elif evt.text == 'stop cat':
-        
+        evt.background = color.green
         reset_scene(update_settings=True)
 
-toggle_button = button(text='run cat', bind=run, pos=scene.title_anchor)
+toggle_button = button(text='run cat', bind=run, pos=scene.title_anchor, background=color.green)
+scene.append_to_title(" ")
 reset_path = button(text='reset path', bind=reset_path, pos=scene.title_anchor)
 
 ### adding components to the path
@@ -480,6 +485,7 @@ def add_component(evt):
         path_components.append({ 'type': 'LOOP', 'radius': 1 })
     reset_scene(update_settings=True)
 component_menu = menu(choices=component_types, bind=update_selection)
+scene.append_to_caption(" ")
 add_component_button = button(text="Add Component", bind=add_component)
 scene.append_to_caption("\n\n")
 # VARIABLES ==========================================
@@ -632,7 +638,7 @@ while True:
                     center_to_cat = norm(cat.pos - circle_parts[ci]['center'])
                     centripetal_force = cat.weight * g * abs(dot(gravity_normal, center_to_cat))
                     
-                    if circle_parts[ci]['type'] == 'HILL':
+                    if circle_parts[ci]['type'] == 'HILL' and cart.pos.x < circle_parts[ci]['center'].x:
                         if centrifugal_force > centripetal_force:
                             # use timeless distance equation to check if max y value is enough to "jump" out of the cart
                             # vf^2 = vi^2 + 2ad where vf = 0, 0 = vi^2 - 2gd, 2gd = vi^2, d = vi^2/(2g)
@@ -655,7 +661,7 @@ while True:
                                 cat.velocity = exit_velocity
                     elif circle_parts[ci]['type'] == 'LOOP' and p1.x > p2.x and p1.y < p2.y:
                         if centrifugal_force < centripetal_force:
-                            exit_velocity = velocity * vec(cos(cat.angle), sin(cat.angle), 0)
+                            exit_velocity = velocity * vec(cos(cat.angle), 0, 0)
                             
                             cat.in_cart = False
                             cat.velocity = exit_velocity

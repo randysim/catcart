@@ -410,7 +410,6 @@ while True:
                 break
             
             if i == 0 and cart.direction < 0:
-                cart.direction = 1
                 cart.kinetic_energy = initial_kinetic_energy
             
             if ci < len(circle_parts) and cart.pos.x > circle_parts[ci]['end']:
@@ -434,7 +433,6 @@ while True:
             angle = simplify_angle(angle)
                 
             cart.rotate(axis=vec(0, 0, 1), angle=angle-cart.angle, origin=cart.pos)
-            
             if cat.in_cart:
                 cat.rotate(axis=vec(0, 0, 1), angle=angle-cart.angle, origin=cat.pos)
                 cat.angle = angle
@@ -442,7 +440,7 @@ while True:
             cart.angle = angle
             
             rs = False # reset variable to make it reset more responsively
-
+            change_direction = False
             while cart.pos.x < p2.x if cart.direction > 0 else cart.pos.x > p2.x:
                 rate(1/dt)
                 
@@ -462,8 +460,7 @@ while True:
                 
                 cart.kinetic_energy = g * apparent_weight * (initial_height - cart.pos.y)
                 
-                if cart.kinetic_energy < 0:
-                    cart.direction = -1
+                change_direction = cart.kinetic_energy < 0
                 
                 if not cat.in_cart:
                     # kinematics here
@@ -505,14 +502,17 @@ while True:
                             if DEBUG:
                                 print("cat go flying")
                             cat.velocity = exit_velocity
-                
+
             cart.pos = p2
             if cat.in_cart:
                 update_cat(cart, cat, p1, p2)
+            if change_direction:
+                cart.direction *= -1
                 
             i += cart.direction
             if rs:
                 break
+
         if running:
             path_completed = True
         

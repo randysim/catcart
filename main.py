@@ -179,8 +179,7 @@ def generate_path(components):
             settings.pop(i)
             components.pop(i)
             
-            reset_widgets()
-            reset_scene()
+            reset_scene(update_settings=True)
 
         if component['type'] == 'LEFT_CURVE':
             points += generate_left_curve(component['initial_height'], starting_pos=starting_pos)
@@ -257,6 +256,7 @@ def generate_path(components):
                 radius_slider = slider(min=0.5, max=2, value=components[i]['radius'], bind=update_radius)
                 
                 settings[i] = {
+                    'hill_label': hill_label,
                     'radius_text': radius_text,
                     'radius_slider': radius_slider,
                     'delete_button': button(bind=delete_segment, text="delete")
@@ -266,6 +266,38 @@ def generate_path(components):
                 scene.append_to_caption('\n')
         elif component['type'] == 'DIP':
             points += generate_dip(component['curvature'], component['height'], starting_pos=starting_pos)
+            
+            if not component.get('rendered_settings'):
+                dip_label = wtext(text=str(i) + ") dip ")
+                curvature_text = wtext(text="radius: {:1.2f}".format(component['curvature']))
+                def update_curvature(evt, i=i):
+                    nonlocal components, settings
+                    components[i]['curvature'] = float(evt.value)
+                    settings[i]['curvature_text'].text = "curvature: {:1.2f}".format(evt.value)
+                    reset_scene()
+                    
+                curvature_slider = slider(min=0, max=10, value=components[i]['curvature'], bind=update_curvature)
+                
+                height_text = wtext(text="height: {:1.2f}".format(component['height']))
+                def update_height(evt, i=i):
+                    nonlocal components, settings
+                    components[i]['height'] = float(evt.value)
+                    settings[i]['height_text'].text = "height: {:1.2f}".format(evt.value)
+                    reset_scene()
+                    
+                height_slider = slider(min=0, max=3, value=components[i]['height'], bind=update_height)
+                
+                settings[i] = {
+                    'dip_label': dip_label,
+                    'curvature_text': curvature_text,
+                    'curvature_slider': curvature_slider,
+                    'height_text': height_text,
+                    'height_slider': height_slider
+                }
+                
+                component['rendered_settings'] = True
+                scene.append_to_caption('\n')
+            
             
     return (points, c_ranges, settings)
 

@@ -218,7 +218,6 @@ def generate_path(components):
             points += generate_left_curve(component['initial_height'], starting_pos=starting_pos)
             
             if not component.get('rendered_settings'):
-                path_label = wtext(text=str(i) + ') left curve ') 
                 initial_height_text = wtext(text='initial height: {:1.2f}'.format(component['initial_height']))
                 # 2nd parameter is to "capture" i into this iteration of the function
                 def update_initial_height(evt, i=i):
@@ -229,14 +228,12 @@ def generate_path(components):
                     reset_scene()
                 
                 settings[i] = {
-                    'path_label': path_label,
                     'initial_height_slider': slider(min=0.5, max=10, value=component['initial_height'], bind=update_initial_height),
-                    'initial_height_text': initial_height_text,
-                    'delete_button': button(bind=delete_segment, text="delete")
+                    'initial_height_text': initial_height_text
                 }
                 
                 component['rendered_settings'] = True
-                scene.append_to_caption('\n')
+                scene.append_to_caption('\n\n')
                 
         elif component['type'] == 'LINE':
             points += generate_line(vec(0, 0, 0), component['vector'], starting_pos=starting_pos)
@@ -269,7 +266,7 @@ def generate_path(components):
                 }
                 
                 component['rendered_settings'] = True
-                scene.append_to_caption('\n')
+                scene.append_to_caption('\n\n')
                 
         elif component['type'] == 'HILL':
             hill_path, hill_top = generate_hill(component['percent_semi_circle'], component['radius'], component['hill_height'], starting_pos=starting_pos)
@@ -298,7 +295,7 @@ def generate_path(components):
                 }
                 
                 component['rendered_settings'] = True
-                scene.append_to_caption('\n')
+                scene.append_to_caption('\n\n')
         elif component['type'] == 'DIP':
             points += generate_dip(component['curvature'], component['height'], starting_pos=starting_pos)
             
@@ -327,11 +324,12 @@ def generate_path(components):
                     'curvature_text': curvature_text,
                     'curvature_slider': curvature_slider,
                     'height_text': height_text,
-                    'height_slider': height_slider
+                    'height_slider': height_slider,
+                    'delete_button': button(bind=delete_segment, text="delete")
                 }
                 
                 component['rendered_settings'] = True
-                scene.append_to_caption('\n')
+                scene.append_to_caption('\n\n')
         elif component['type'] == 'LOOP':
             loop_path, loop_range = generate_loop(component['radius'], starting_pos=starting_pos)
             loop_range['start'] += len(points)
@@ -352,12 +350,11 @@ def generate_path(components):
                 settings[i] = {
                     'loop_label': loop_label,
                     'radius_text': radius_text,
-                    'radius_slider': radius_slider
+                    'radius_slider': radius_slider,
+                    'delete_button': button(bind=delete_segment, text="delete")
                 }
                 component['rendered_settings'] = True
-                scene.append_to_caption('\n')
-            
-            
+                scene.append_to_caption('\n\n')
             
     return (points, c_ranges, settings)
 
@@ -394,13 +391,17 @@ def generate_cat():
 
 # USER INPUT ==========================
 def reset_scene(update_settings=False):
-    global reset, cart, cat, path_completed, path_curve, cart_path, circle_parts, path_components, running, toggle_button, settings
+    global reset, cart, cat, path_completed, path_curve, cart_path, circle_parts, path_components, running, toggle_button, settings, component_menu, component_types, selected_component
     cart.visible = False
     cat.visible = False
     path_curve.visible = False
     
+    
     if update_settings:
         reset_widgets()
+        component_menu = menu(choices=component_types, bind=update_selection)
+        component_menu.selected = selected_component
+        scene.append_to_caption("\n\n")
         cart_path, circle_parts, settings = generate_path(path_components)
     else:
         cart_path, circle_parts, _ = generate_path(path_components)
@@ -459,7 +460,13 @@ def run(evt):
 
 toggle_button = button(text='run cat', bind=run, pos=scene.title_anchor)
 reset_path = button(text='reset path', bind=reset_path, pos=scene.title_anchor)
-
+component_types = ["LINE", "HILL", "DIP", "LOOP"]
+selected_component = "LINE"
+def update_selection(evt):
+    global selected_component
+    selected_component = evt.selected
+component_menu = menu(choices=component_types, bind=update_selection)
+scene.append_to_caption("\n\n")
 
 # VARIABLES ==========================================
 

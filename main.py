@@ -31,7 +31,7 @@ def get_perpendicular(p1, p2):
 
 def update_cat(cart, cat, p1, p2):
     direction = 1
-    if p1.x > p2.x:
+    if p1.x > p2.x and cart.direction < 0:
         direction = -1
     cat.pos = cart.pos + get_perpendicular(p1, p2) * 0.2 * direction
 
@@ -73,6 +73,9 @@ def generate_hill(percent_semi_circle, radius, hill_height, starting_pos=None, y
     num_points = int(1.5 * hill_width/point_every)
     offset = vec(0, 0, 0)
     
+    circle_top_start = None
+    circle_top_end = None
+    
     for i in range(num_points):
         percent_done = i/num_points # percent done with drawing
         cx = c1_start + (hill_width*percent_done) # current x coordinate
@@ -85,7 +88,11 @@ def generate_hill(percent_semi_circle, radius, hill_height, starting_pos=None, y
                     0
                 ) + offset
             )
+            if not circle_top_end:
+                circle_top_end = i-1
         elif (cx > c_start):
+            if not circle_top_start:
+                circle_top_start = i
             c_points.append(
                 vec(
                     cx,
@@ -104,8 +111,8 @@ def generate_hill(percent_semi_circle, radius, hill_height, starting_pos=None, y
         if i == 0 and starting_pos:
             offset = starting_pos - c_points[i]
             c_points[i] = starting_pos
-            
-    return (c_points, { 'start': c_start + offset.x, 'end': c2_start + offset.x, 'type': "HILL", 'center': vec(x_coord + offset.x, y_coord + offset.y, 0), 'radius': radius  })
+    
+    return (c_points, { 'start': circle_top_start, 'end': circle_top_end, 'type': "HILL", 'center': vec(x_coord + offset.x, y_coord + offset.y, 0), 'radius': radius  })
 
 def generate_left_curve(initial_height, starting_pos=None):
     c_points = []
@@ -160,6 +167,32 @@ def generate_dip(curvature, height, starting_pos=None):
             c_points[i] = starting_pos
         cx += dx
     return c_points
+
+def generate_loop(radius, starting_pos=None):
+    t = -pi/2
+    num_points = (2 * pi * radius)/point_every + 1
+    dt = (2 * pi) / (num_points - 1)
+    
+    c_points = []
+    
+    # c_points += generate_line(vec(-0.4, 0, 0), vec(0, 0, 0), starting_pos=starting_pos)
+    offset = vec(0, 0, 0)
+    
+    for i in range(num_points):
+        cx = radius * cos(t)
+        cy = radius * sin(t)
+        
+        c_points.append(vec(cx, cy, 0) + offset)
+        
+        if i == 0 and starting_pos:
+            offset = starting_pos - c_points[i]
+            c_points[i] = starting_pos
+        t += dt
+        
+    c_points += generate_line(vec(0, 0, 0), vec(1, 0, 0), starting_pos=c_points[-1])
+    
+    return (c_points, {'start': 0, 'end': num_points, 'center': vec(offset.x, offset.y, 0), 'radius': radius, 'type': 'LOOP' })
+    
 
 def generate_path(components):
     points = []
@@ -240,8 +273,10 @@ def generate_path(components):
                 
         elif component['type'] == 'HILL':
             hill_path, hill_top = generate_hill(component['percent_semi_circle'], component['radius'], component['hill_height'], starting_pos=starting_pos)
+            hill_top['start'] += len(points)
+            hill_top['end'] += len(points)
             points += hill_path
-            c_ranges += hill_top
+            c_ranges += [hill_top]
             
             if not component.get('rendered_settings'):
                 hill_label = wtext(text=str(i) + ") hill ")
@@ -297,6 +332,13 @@ def generate_path(components):
                 
                 component['rendered_settings'] = True
                 scene.append_to_caption('\n')
+        elif component['type'] == 'LOOP':
+            loop_path, loop_range = generate_loop(component['radius'], starting_pos=starting_pos)
+            loop_range['start'] += len(points)
+            loop_range['end'] += len(points)
+            points += loop_path
+            c_ranges += [loop_range]
+            
             
             
     return (points, c_ranges, settings)
@@ -368,7 +410,8 @@ def reset_path():
         { 'type': 'LEFT_CURVE', 'initial_height': 2 },
         { 'type': 'LINE', 'vector': vec(2, 0, 0) },
         { 'type': 'HILL', 'percent_semi_circle': 0.96, 'radius': 1, 'hill_height': 2 },
-        { 'type': 'LINE', 'vector': vec(2, 0, 0) }
+        { 'type': 'LINE', 'vector': vec(2, 0, 0) },
+        { 'type': 'LOOP', 'radius': 1 }
     ]
     
     reset_scene(update_settings=True)
@@ -419,7 +462,8 @@ path_components = [
     { 'type': 'LINE', 'vector': vec(2, 0, 0) },
     { 'type': 'HILL', 'percent_semi_circle': 0.96, 'radius': 1, 'hill_height': 2 },
     { 'type': 'DIP', 'curvature': 6.1, 'height': 0.5 },
-    { 'type': 'LINE', 'vector': vec(2, 0, 0) }
+    { 'type': 'LINE', 'vector': vec(2, 0, 0) },
+    { 'type': 'LOOP', 'radius': 1 }
 ]
 cart_path, circle_parts, settings = generate_path(path_components)
 path_curve = curve(pos=cart_path)
@@ -467,6 +511,7 @@ while True:
             
             if ci < len(circle_parts) and cart.pos.x > circle_parts[ci]['end']:
                 ci += 1
+                cat.has_said_feeling = False
             
             p1 = cart_path[i]
             p2 = cart_path[i+cart.direction]
@@ -475,14 +520,20 @@ while True:
                 i += cart.direction
                 continue
             
+            on_loop = ci < len(circle_parts) and circle_parts[ci]['type'] == 'LOOP' and circle_parts[ci]['start'] <= i and circle_parts[ci]['end'] >= i
             going_down = p1.y > p2.y
             
             angle = get_angle(p1, p2)
             if going_down:
                 angle *= -1
-            if cart.direction < 0:
-                angle += pi
-            
+            if p1.x > p2.x:
+                if on_loop:
+                    angle = 2 * pi - angle
+                    if cart.direction > 0:
+                        angle *= -1
+                else:
+                    angle += pi
+                    
             angle = simplify_angle(angle)
                 
             cart.rotate(axis=vec(0, 0, 1), angle=angle-cart.angle, origin=cart.pos)
@@ -494,7 +545,7 @@ while True:
             
             rs = False # reset variable to make it reset more responsively
             change_direction = False
-            while cart.pos.x < p2.x if cart.direction > 0 else cart.pos.x > p2.x:
+            while cart.pos.x < p2.x if p1.x < p2.x else cart.pos.x > p2.x:
                 rate(1/dt)
                 
                 if not running:
@@ -533,33 +584,48 @@ while True:
                                 print("cat hit ground")
                             cat.grounded = True
                         
-                elif ci < len(circle_parts) and circle_parts[ci]['start'] < cat.pos.x and cat.pos.x < circle_parts[ci]['end'] and not cat.grounded:
+                elif ci < len(circle_parts) and circle_parts[ci]['start'] < i and i < circle_parts[ci]['end'] and not cat.grounded:
                     # centripetal force calculation here
                     centrifugal_force = cat.weight * velocity ** 2 / circle_parts[ci]['radius']
                     gravity_normal = vec(0, 1, 0)
                     center_to_cat = norm(cat.pos - circle_parts[ci]['center'])
                     centripetal_force = cat.weight * g * abs(dot(gravity_normal, center_to_cat))
                     
-                    if centrifugal_force > centripetal_force:
-                        # use timeless distance equation to check if max y value is enough to "jump" out of the cart
-                        # vf^2 = vi^2 + 2ad where vf = 0, 0 = vi^2 - 2gd, 2gd = vi^2, d = vi^2/(2g)
-                        # must multiply by "dx" because in this program, dx is used to adjust the scale of values in each loop
-                        # NOTE: cart also moves upward so find the point the cat is above at that time and thats the y position of the cart
-                        exit_velocity = velocity * vec(cos(cat.angle), sin(cat.angle), 0)
-                        distance_upward = ((exit_velocity.y * dx)**2)/(2 * g)
-                        future_x = cat.pos.x + (exit_velocity.y/g) * exit_velocity.x
-                            
-                        # if no abovepoint, it means the cat went REALLY REALLY far
-                        if distance_upward < (cart.height + cat.height/3):
-                            if not cat.has_said_feeling:
+                    if circle_parts[ci]['type'] == 'HILL':
+                        if centrifugal_force > centripetal_force:
+                            # use timeless distance equation to check if max y value is enough to "jump" out of the cart
+                            # vf^2 = vi^2 + 2ad where vf = 0, 0 = vi^2 - 2gd, 2gd = vi^2, d = vi^2/(2g)
+                            # must multiply by "dx" because in this program, dx is used to adjust the scale of values in each loop
+                            # NOTE: cart also moves upward so find the point the cat is above at that time and thats the y position of the cart
+                            exit_velocity = velocity * vec(cos(cat.angle), sin(cat.angle), 0)
+                            distance_upward = ((exit_velocity.y * dx)**2)/(2 * g)
+                            future_x = cat.pos.x + (exit_velocity.y/g) * exit_velocity.x
+                                
+                            # if no abovepoint, it means the cat went REALLY REALLY far
+                            if distance_upward < (cart.height + cat.height/2):
+                                if not cat.has_said_feeling:
+                                    if DEBUG:
+                                        print("cat feel light")
+                                    cat.has_said_feeling = True
+                            else:
+                                cat.in_cart = False
                                 if DEBUG:
-                                    print("cat feel light")
-                                cat.has_said_feeling = True
-                        else:
+                                    print("cat go flying")
+                                cat.velocity = exit_velocity
+                    elif circle_parts[ci]['type'] == 'LOOP' and p1.x > p2.x and p1.y < p2.y:
+                        if centrifugal_force < centripetal_force:
+                            exit_velocity = velocity * vec(cos(cat.angle), sin(cat.angle), 0)
+                            
                             cat.in_cart = False
-                            if DEBUG:
-                                print("cat go flying")
                             cat.velocity = exit_velocity
+                            
+                            if DEBUG and not cat.has_said_feeling:
+                                cat.has_said_feeling = True
+                                print("cat fall off loop")
+                        else:
+                            if DEBUG and not cat.has_said_feeling:
+                                cat.has_said_feeling = True
+                                print("cat hold onto loop for dear life")
 
             cart.pos = p2
             if cat.in_cart:

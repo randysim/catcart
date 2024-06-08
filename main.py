@@ -391,16 +391,16 @@ def generate_cat():
 
 # USER INPUT ==========================
 def reset_scene(update_settings=False):
-    global reset, cart, cat, path_completed, path_curve, cart_path, circle_parts, path_components, running, toggle_button, settings, component_menu, component_types, selected_component
+    global reset, cart, cat, path_completed, path_curve, cart_path, circle_parts, path_components, running, toggle_button, settings, component_menu, component_types, selected_component, add_component_button
     cart.visible = False
     cat.visible = False
     path_curve.visible = False
-    
     
     if update_settings:
         reset_widgets()
         component_menu = menu(choices=component_types, bind=update_selection)
         component_menu.selected = selected_component
+        add_component_button = button(text="Add Component", bind=add_component)
         scene.append_to_caption("\n\n")
         cart_path, circle_parts, settings = generate_path(path_components)
     else:
@@ -460,14 +460,28 @@ def run(evt):
 
 toggle_button = button(text='run cat', bind=run, pos=scene.title_anchor)
 reset_path = button(text='reset path', bind=reset_path, pos=scene.title_anchor)
+
+### adding components to the path
 component_types = ["LINE", "HILL", "DIP", "LOOP"]
 selected_component = "LINE"
 def update_selection(evt):
     global selected_component
     selected_component = evt.selected
+def add_component(evt):
+    global selected_component, path_components
+    
+    if selected_component == "LINE":
+        path_components.append({ 'type': 'LINE', 'vector': vec(2, 0, 0) })
+    elif selected_component == "HILL":
+        path_components.append({ 'type': 'HILL', 'percent_semi_circle': 0.96, 'radius': 1, 'hill_height': 2 })
+    elif selected_component == "DIP":
+        path_components.append({ 'type': 'DIP', 'curvature': 6.1, 'height': 0.5 })
+    elif selected_component == "LOOP":
+        path_components.append({ 'type': 'LOOP', 'radius': 1 })
+    reset_scene(update_settings=True)
 component_menu = menu(choices=component_types, bind=update_selection)
+add_component_button = button(text="Add Component", bind=add_component)
 scene.append_to_caption("\n\n")
-
 # VARIABLES ==========================================
 
 # physics variables

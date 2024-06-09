@@ -2,7 +2,6 @@ Web VPython 3.2
 
 scene.autoscale = False
 scene.range = 4
-scene.center = vec(2.5, 0.5, 0)
 DEBUG = True
 point_every = 0.05
 
@@ -390,13 +389,22 @@ def generate_cat():
 
 # USER INPUT ==========================
 def reset_scene(update_settings=False):
-    global reset, cart, cat, path_completed, path_curve, cart_path, circle_parts, path_components, running, toggle_button, settings, component_menu, component_types, selected_component, add_component_button
+    global reset, cart, cat, path_completed, path_curve, cart_path, circle_parts, path_components, running, toggle_button, settings, component_menu, component_types, selected_component, add_component_button, view_amount, view_text, view_slider
     cart.visible = False
     cat.visible = False
     path_curve.visible = False
     
+    # make it stay on the same view amount after reset
+    current_view_index = int(view_amount/10 * len(cart_path))
+    
     if update_settings:
         reset_widgets()
+        
+        view_text = wtext(text="Slide to move camera")
+        scene.append_to_caption("\n")
+        view_slider = slider(min=0, max=10, value=view_amount, bind=adjust_view)
+        scene.append_to_caption("\n\n")
+
         component_menu = menu(choices=component_types, bind=update_selection)
         component_menu.selected = selected_component
         scene.append_to_caption(" ")
@@ -406,6 +414,9 @@ def reset_scene(update_settings=False):
     else:
         cart_path, circle_parts, _ = generate_path(path_components)
     
+    view_amount = (current_view_index/len(cart_path)) * 10
+    view_slider.value = view_amount
+    slide_camera()
     path_curve = curve(pos=cart_path)
     
     cart = generate_cart()
@@ -466,6 +477,34 @@ toggle_button = button(text='run cat', bind=run, pos=scene.title_anchor, backgro
 scene.append_to_title(" ")
 reset_path = button(text='reset path', bind=reset_path, pos=scene.title_anchor)
 
+
+### slider view of coaster
+def adjust_view(evt):
+    global view_amount
+    view_amount = float(evt.value)
+    slide_camera()
+def slide_camera():
+    global cart_path, view_amount
+    
+    c_index = int(view_amount/10 * len(cart_path))
+    y = scene.center.y
+        
+    current_point = cart_path[c_index]
+    
+    range = scene.range - 1
+    if abs(y - current_point.y) > range:
+        bound = range
+        if y > current_point.y:
+            bound *= -1
+        y += (current_point.y-y)-bound
+    
+    scene.center = vec(current_point.x, y, 0)
+view_amount = 0
+view_text = wtext(text="Slide to move camera")
+scene.append_to_caption("\n")
+view_slider = slider(min=0, max=10, value=view_amount, bind=adjust_view)
+scene.append_to_caption("\n\n")
+
 ### adding components to the path
 component_types = ["LINE", "HILL", "DIP", "LOOP"]
 selected_component = "LINE"
@@ -512,16 +551,12 @@ path_components = [
     { 'type': 'LOOP', 'radius': 1 }
 ]
 cart_path, circle_parts, settings = generate_path(path_components)
+slide_camera()
 path_curve = curve(pos=cart_path)
 
 while True:
     if not path_completed and running:
         # set scene
-        """
-        scene.autoscale = False
-        scene.range = 4
-        scene.center = vec(2.5, 0.5, 0)
-        """
         
         # object variables
         initial_height = cart_path[0].y

@@ -1,7 +1,10 @@
 Web VPython 3.2
 
+scene.userzoom = False
+scene.userpan = False
+scene.userspin = False
 scene.autoscale = False
-scene.range = 4
+scene.range = 3
 DEBUG = True
 point_every = 0.05
 
@@ -417,7 +420,7 @@ def reset_scene(update_settings=False):
     view_amount = (current_view_index/len(cart_path)) * 10
     view_slider.value = view_amount
     slide_camera()
-    path_curve = curve(pos=cart_path)
+    path_curve = curve(pos=cart_path, radius=0.03)
     
     cart = generate_cart()
     cat = generate_cat()
@@ -479,12 +482,15 @@ reset_path = button(text='reset path', bind=reset_path, pos=scene.title_anchor)
 
 
 ### slider view of coaster
+# background
+background = box(size=vec(13, 7.3125, 0.001), pos=vec(0, 0, -1), shininess=0, texture="https://lh3.googleusercontent.com/u/0/drive-viewer/AKGpihaA3t7YI2QLt0l7qZ5Zd81P1qExpE3Pq73EmA-0DHy1Feom7-MUZdF_rolxEuKT3FkJFLL3-UjeA1Lka2DxuL8pwjPenNbXBA=w1960-h4240-rw-v1")
+
 def adjust_view(evt):
     global view_amount
     view_amount = float(evt.value)
     slide_camera()
 def slide_camera():
-    global cart_path, view_amount
+    global cart_path, view_amount, background
     
     c_index = int(view_amount/10 * len(cart_path))
     y = scene.center.y
@@ -499,6 +505,7 @@ def slide_camera():
         y += (current_point.y-y)-bound
     
     scene.center = vec(current_point.x, y, 0)
+    background.pos = scene.center
 view_amount = 0
 view_text = wtext(text="Slide to move camera")
 scene.append_to_caption("\n")
@@ -552,7 +559,7 @@ path_components = [
 ]
 cart_path, circle_parts, settings = generate_path(path_components)
 slide_camera()
-path_curve = curve(pos=cart_path)
+path_curve = curve(pos=cart_path, radius=0.03)
 
 while True:
     if not path_completed and running:

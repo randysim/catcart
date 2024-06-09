@@ -491,7 +491,7 @@ def slide_camera():
         
     current_point = cart_path[c_index]
     
-    range = scene.range - 1
+    range = scene.range * 0.75
     if abs(y - current_point.y) > range:
         bound = range
         if y > current_point.y:

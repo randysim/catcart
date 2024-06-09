@@ -564,7 +564,7 @@ scene.append_to_caption("\n\n")
 
 # physics variables
 dt = 0.01
-dx = 0.5 # scale for how much distance is supposed to be "traveled" per interpolation
+dx = 0.6 # scale for how much distance is supposed to be "traveled" per interpolation
 g = 9.81
 
 # persistent variables

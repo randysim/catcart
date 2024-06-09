@@ -5,7 +5,7 @@ scene.userpan = False
 scene.userspin = False
 scene.autoscale = False
 scene.range = 3
-DEBUG = True
+DEBUG = False
 point_every = 0.05
 
 # HELPFUL MATH FUNCTIONS ======================

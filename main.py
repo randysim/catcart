@@ -4,7 +4,7 @@ scene.userzoom = False
 scene.userpan = False
 scene.userspin = False
 scene.autoscale = False
-scene.range = 3
+scene.range = 3.2
 DEBUG = False
 point_every = 0.05
 
@@ -137,7 +137,7 @@ def generate_left_curve(initial_height, starting_pos=None):
     
     
 def generate_line(p1, p2, starting_pos=None):
-    num_points = int(((p2.x-p1.x)/point_every) * 0.75) + 1
+    num_points = int(((p2.x-p1.x)/point_every) * 0.85) + 1
     slope = (p2 - p1)/(num_points - 1)
     ps = [p1]
     
@@ -153,7 +153,7 @@ def generate_line(p1, p2, starting_pos=None):
  
 def generate_dip(curvature, height, starting_pos=None):
     width = 1
-    num_points = int((width/point_every) * 1.5) + 1
+    num_points = int((width/point_every)) + 1
     cx = -width/2
     dx = width/(num_points-1)
     
@@ -675,7 +675,6 @@ while True:
                         rs = True
                         break
                         
-                    
                     apparent_weight = cart.weight
                     if cat.in_cart:
                         apparent_weight += cat.weight

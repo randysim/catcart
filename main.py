@@ -172,7 +172,7 @@ def generate_dip(curvature, height, starting_pos=None):
 
 def generate_loop(radius, starting_pos=None):
     t = -pi/2
-    num_points = (2 * pi * radius)/point_every + 1
+    num_points = (pi * radius)/point_every + 1
     dt = (2 * pi) / (num_points - 1)
     
     c_points = []
@@ -189,8 +189,6 @@ def generate_loop(radius, starting_pos=None):
             offset = starting_pos - c_points[i]
             c_points[i] = starting_pos
         t += dt
-        
-    c_points += generate_line(vec(0, 0, 0), vec(1, 0, 0), starting_pos=c_points[-1])
     
     return (c_points, {'start': 0, 'end': num_points, 'center': vec(offset.x, offset.y, 0), 'radius': radius, 'type': 'LOOP' })
     
@@ -332,10 +330,12 @@ def generate_path(components):
                 component['rendered_settings'] = True
                 scene.append_to_caption('\n\n')
         elif component['type'] == 'LOOP':
-            loop_path, loop_range = generate_loop(component['radius'], starting_pos=starting_pos)
+            points += generate_line(vec(0, 0, 0), vec(component['radius'], 0, 0), starting_pos=starting_pos)
+            loop_path, loop_range = generate_loop(component['radius'], starting_pos=points[-1])
             loop_range['start'] += len(points)
             loop_range['end'] += len(points)
             points += loop_path
+            points += generate_line(vec(0, 0, 0), vec(component['radius'], 0, 0), starting_pos=points[-1])
             c_ranges += [loop_range]
             
             if not component.get('rendered_settings'):
@@ -439,7 +439,8 @@ def reset_widgets():
         component['rendered_settings'] = False
     
 def reset_path():
-    global path_components, toggle_button
+    global path_components, toggle_button, view_amount
+    view_amount = 0
     path_components = [
         { 'type': 'LEFT_CURVE', 'initial_height': 2 },
         { 'type': 'LINE', 'vector': vec(2, 0, 0) },
@@ -494,7 +495,7 @@ def slide_camera():
     global cart_path, view_amount, background
     
     try:
-        c_index = int(view_amount/10 * len(cart_path))
+        c_index = int(view_amount/10 * (len(cart_path) - 1))
         y = scene.center.y
             
         current_point = cart_path[c_index]

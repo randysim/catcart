@@ -153,7 +153,7 @@ def generate_line(p1, p2, starting_pos=None):
  
 def generate_dip(curvature, height, starting_pos=None):
     width = 1
-    num_points = int(width/point_every) + 1
+    num_points = int((width/point_every) * 1.5) + 1
     cx = -width/2
     dx = width/(num_points-1)
     

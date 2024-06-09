@@ -222,7 +222,7 @@ def generate_path(components):
                 def update_initial_height(evt, i=i):
                     nonlocal components, initial_height_text # like "global" but raises scope to next non-global scope
                     components[i]['initial_height'] = evt.value
-                    initial_height_text.text = 'initial height: {:1.2f}'.format(evt.value)
+                    initial_height_text.text = 'INITIAL HEIGHT: {:1.2f}'.format(evt.value)
                     
                     reset_scene()
                 
@@ -300,7 +300,7 @@ def generate_path(components):
             
             if not component.get('rendered_settings'):
                 dip_label = wtext(text=str(i) + ") DIP - ")
-                curvature_text = wtext(text="radius: {:1.2f}".format(component['curvature']))
+                curvature_text = wtext(text="curvature: {:1.2f}".format(component['curvature']))
                 def update_curvature(evt, i=i):
                     nonlocal components, settings
                     components[i]['curvature'] = float(evt.value)

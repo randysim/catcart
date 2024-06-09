@@ -392,10 +392,12 @@ def generate_cat():
 
 # USER INPUT ==========================
 def reset_scene(update_settings=False):
-    global reset, cart, cat, path_completed, path_curve, cart_path, circle_parts, path_components, running, toggle_button, settings, component_menu, component_types, selected_component, add_component_button, view_amount, view_text, view_slider
+    global reset, cart, cat, path_completed, path_curve, cart_path, circle_parts, path_components, running, toggle_button, settings, component_menu, component_types, selected_component, add_component_button, view_amount, view_text, view_slider, follow_cat, follow_cat_button
     cart.visible = False
     cat.visible = False
     path_curve.visible = False
+    
+    view_slider.disabled = False
     
     # make it stay on the same view amount after reset
     current_view_index = int(view_amount/10 * len(cart_path))
@@ -406,6 +408,9 @@ def reset_scene(update_settings=False):
         view_text = wtext(text="Slide to move camera")
         scene.append_to_caption("\n")
         view_slider = slider(min=0, max=10, value=view_amount, bind=adjust_view)
+        scene.append_to_caption(" ")
+        follow_cart_button = radio(text="Follow Cart", checked=follow_cart, bind=set_follow_cart)
+        
         scene.append_to_caption("\n\n")
 
         component_menu = menu(choices=component_types, bind=update_selection)
@@ -465,12 +470,15 @@ def set_widgets(disabled):
                 widget.disabled = disabled
 
 def run(evt):
-    global running, toggle_button
+    global running, toggle_button, view_slider, follow_cart
     
     if evt.text == 'run cat':
         running = True
         evt.text = 'stop cat'
         evt.background = color.red
+        
+        if follow_cart:
+            view_slider.disabled = True
         
         # disable widgets
         set_widgets(disabled=True)
@@ -492,7 +500,7 @@ def adjust_view(evt):
     view_amount = float(evt.value)
     slide_camera()
 def slide_camera():
-    global cart_path, view_amount, background
+    global cart_path, view_amount, background, view_slider
     
     try:
         c_index = int(view_amount/10 * (len(cart_path) - 1))
@@ -516,6 +524,18 @@ view_amount = 0
 view_text = wtext(text="Slide to move camera")
 scene.append_to_caption("\n")
 view_slider = slider(min=0, max=10, value=view_amount, bind=adjust_view)
+
+### radio buttons 
+follow_cart = False
+def set_follow_cart(evt):
+    global follow_cart, view_slider, running
+    follow_cart = evt.checked
+    
+    if running:
+        view_slider.disabled = follow_cart
+
+scene.append_to_caption(" ")
+follow_cart_button = radio(text="Follow Cart", checked=follow_cart, bind=set_follow_cart)
 scene.append_to_caption("\n\n")
 
 ### adding components to the path
@@ -641,12 +661,20 @@ while True:
                 
                 rs = False # reset variable to make it reset more responsively
                 change_direction = False
+                
+                if follow_cart:
+                    view_amount = (i/len(cart_path)) * 10
+                    view_slider.value = view_amount
+                    background.pos = cart.pos
+                    scene.center = cart.pos
+                
                 while cart.pos.x < p2.x if p1.x < p2.x else cart.pos.x > p2.x:
                     rate(1/dt)
                     
                     if not running:
                         rs = True
                         break
+                        
                     
                     apparent_weight = cart.weight
                     if cat.in_cart:
@@ -657,6 +685,10 @@ while True:
                     
                     if cat.in_cart:
                         update_cat(cart, cat, p1, p2)
+                        
+                    if follow_cart:
+                        background.pos = cart.pos
+                        scene.center = cart.pos
                     
                     cart.kinetic_energy = g * apparent_weight * (initial_height - cart.pos.y)
                     

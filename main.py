@@ -427,6 +427,7 @@ def reset_scene(update_settings=False):
     running = False
     path_completed = False
     toggle_button.text = 'run cat'
+    toggle_button.background = color.green
     
     # enable widgets again
     set_widgets(disabled=False)
@@ -492,20 +493,24 @@ def adjust_view(evt):
 def slide_camera():
     global cart_path, view_amount, background
     
-    c_index = int(view_amount/10 * len(cart_path))
-    y = scene.center.y
+    try:
+        c_index = int(view_amount/10 * len(cart_path))
+        y = scene.center.y
+            
+        current_point = cart_path[c_index]
         
-    current_point = cart_path[c_index]
-    
-    range = scene.range * 0.75
-    if abs(y - current_point.y) > range:
-        bound = range
-        if y > current_point.y:
-            bound *= -1
-        y += (current_point.y-y)-bound
-    
-    scene.center = vec(current_point.x, y, 0)
-    background.pos = scene.center
+        range = scene.range * 0.75
+        if abs(y - current_point.y) > range:
+            bound = range
+            if y > current_point.y:
+                bound *= -1
+            y += (current_point.y-y)-bound
+        
+        scene.center = vec(current_point.x, y, 0)
+        background.pos = scene.center
+    except:
+        if DEBUG:
+            print("Error moving camera")
 view_amount = 0
 view_text = wtext(text="Slide to move camera")
 scene.append_to_caption("\n")
@@ -589,158 +594,162 @@ while True:
         # loop variables
         i = 0
         ci = 0 # counter for circular paths traversed
-    
-        while i < len(cart_path) - 1 and i >= 0:
-            if not running:
-                break
-            
-            if i == 0 and cart.direction < 0:
-                cart.kinetic_energy = initial_kinetic_energy
-            
-            if ci < len(circle_parts) and i >= circle_parts[ci]['end']:
-                ci += 1
-                cat.has_said_feeling = False
-            
-            p1 = cart_path[i]
-            p2 = cart_path[i+cart.direction]
-            # skip if two points are the same
-            if p1.x == p2.x and p1.y == p2.y:
-                i += cart.direction
-                continue
-            
-            on_loop = ci < len(circle_parts) and circle_parts[ci]['type'] == 'LOOP' and circle_parts[ci]['start'] <= i and circle_parts[ci]['end'] >= i
-            going_down = p1.y > p2.y
-            
-            angle = get_angle(p1, p2)
-            if going_down:
-                angle *= -1
-            if p1.x > p2.x:
-                if on_loop and cart.direction > 0:
-                    pass
-                else:
-                    angle += pi
-            else:
-                if on_loop and cart.direction < 0:
-                    angle += pi
-                    
-            angle = simplify_angle(angle)
-                
-            cart.rotate(axis=vec(0, 0, 1), angle=angle-cart.angle, origin=cart.pos)
-            if cat.in_cart:
-                cat.rotate(axis=vec(0, 0, 1), angle=angle-cart.angle, origin=cat.pos)
-                cat.angle = angle
-                
-            cart.angle = angle
-            
-            rs = False # reset variable to make it reset more responsively
-            change_direction = False
-            while cart.pos.x < p2.x if p1.x < p2.x else cart.pos.x > p2.x:
-                rate(1/dt)
-                
+        
+        try:
+            while i < len(cart_path) - 1 and i >= 0:
                 if not running:
-                    rs = True
                     break
                 
-                apparent_weight = cart.weight
+                if i == 0 and cart.direction < 0:
+                    cart.kinetic_energy = initial_kinetic_energy
+                
+                if ci < len(circle_parts) and i >= circle_parts[ci]['end']:
+                    ci += 1
+                    cat.has_said_feeling = False
+                
+                p1 = cart_path[i]
+                p2 = cart_path[i+cart.direction]
+                # skip if two points are the same
+                if p1.x == p2.x and p1.y == p2.y:
+                    i += cart.direction
+                    continue
+                
+                on_loop = ci < len(circle_parts) and circle_parts[ci]['type'] == 'LOOP' and circle_parts[ci]['start'] <= i and circle_parts[ci]['end'] >= i
+                going_down = p1.y > p2.y
+                
+                angle = get_angle(p1, p2)
+                if going_down:
+                    angle *= -1
+                if p1.x > p2.x:
+                    if on_loop and cart.direction > 0:
+                        pass
+                    else:
+                        angle += pi
+                else:
+                    if on_loop and cart.direction < 0:
+                        angle += pi
+                        
+                angle = simplify_angle(angle)
+                    
+                cart.rotate(axis=vec(0, 0, 1), angle=angle-cart.angle, origin=cart.pos)
                 if cat.in_cart:
-                    apparent_weight += cat.weight
+                    cat.rotate(axis=vec(0, 0, 1), angle=angle-cart.angle, origin=cat.pos)
+                    cat.angle = angle
+                    
+                cart.angle = angle
                 
-                velocity = sqrt((2 * abs(cart.kinetic_energy))/apparent_weight)
-                cart.pos += norm(p2-p1) * dx * velocity * dt
-                
+                rs = False # reset variable to make it reset more responsively
+                change_direction = False
+                while cart.pos.x < p2.x if p1.x < p2.x else cart.pos.x > p2.x:
+                    rate(1/dt)
+                    
+                    if not running:
+                        rs = True
+                        break
+                    
+                    apparent_weight = cart.weight
+                    if cat.in_cart:
+                        apparent_weight += cat.weight
+                    
+                    velocity = sqrt((2 * abs(cart.kinetic_energy))/apparent_weight)
+                    cart.pos += norm(p2-p1) * dx * velocity * dt
+                    
+                    if cat.in_cart:
+                        update_cat(cart, cat, p1, p2)
+                    
+                    cart.kinetic_energy = g * apparent_weight * (initial_height - cart.pos.y)
+                    
+                    if not change_direction and cart.kinetic_energy < 0:
+                        change_direction = True
+                        cart.direction *= -1
+                        temp = p2
+                        p2 = p1
+                        p1 = temp
+                    
+                    if not cat.in_cart:
+                        # kinematics here
+                        if not cat.grounded:
+                            cat.pos += cat.velocity * dt * dx
+                            cat.velocity -= g * vec(0, 1, 0) * dt
+                            
+                            is_intersect, above_points = path_intersect(cart_path, cat)
+                            
+                            if is_intersect:
+                                if DEBUG:
+                                    print("cat hit ground")
+                                cat.grounded = True
+                            
+                    elif ci < len(circle_parts) and circle_parts[ci]['start'] < i and i < circle_parts[ci]['end'] and not cat.grounded:
+                        # centripetal force calculation here
+                        centrifugal_force = cat.weight * velocity ** 2 / circle_parts[ci]['radius']
+                        gravity_normal = vec(0, 1, 0)
+                        center_to_cat = norm(cat.pos - circle_parts[ci]['center'])
+                        centripetal_force = cat.weight * g * abs(dot(gravity_normal, center_to_cat))
+                        
+                        if circle_parts[ci]['type'] == 'HILL' and cart.pos.x < circle_parts[ci]['center'].x:
+                            if centrifugal_force > centripetal_force:
+                                # use timeless distance equation to check if max y value is enough to "jump" out of the cart
+                                # vf^2 = vi^2 + 2ad where vf = 0, 0 = vi^2 - 2gd, 2gd = vi^2, d = vi^2/(2g)
+                                # must multiply by "dx" because in this program, dx is used to adjust the scale of values in each loop
+                                # NOTE: cart also moves upward so find the point the cat is above at that time and thats the y position of the cart
+                                exit_velocity = velocity * vec(cos(cat.angle), sin(cat.angle), 0)
+                                distance_upward = ((exit_velocity.y * dx)**2)/(2 * g)
+                                future_x = cat.pos.x + (exit_velocity.y/g) * exit_velocity.x
+                                    
+                                # if no abovepoint, it means the cat went REALLY REALLY far
+                                if distance_upward < (cart.height + cat.height/2):
+                                    if not cat.has_said_feeling:
+                                        if DEBUG:
+                                            print("cat feel light")
+                                        cat.has_said_feeling = True
+                                else:
+                                    cat.in_cart = False
+                                    if DEBUG:
+                                        print("cat go flying")
+                                    cat.velocity = exit_velocity
+                        elif circle_parts[ci]['type'] == 'LOOP' and p1.x > p2.x and p1.y < p2.y:
+                            if centrifugal_force < centripetal_force:
+                                exit_velocity = velocity * vec(cos(cat.angle), 0, 0)
+                                
+                                cat.in_cart = False
+                                cat.velocity = exit_velocity
+                                
+                                if DEBUG and not cat.has_said_feeling:
+                                    cat.has_said_feeling = True
+                                    print("cat fall off loop")
+                            else:
+                                if DEBUG and not cat.has_said_feeling:
+                                    cat.has_said_feeling = True
+                                    print("cat hold onto loop for dear life")
+    
+                cart.pos = p2
                 if cat.in_cart:
                     update_cat(cart, cat, p1, p2)
-                
-                cart.kinetic_energy = g * apparent_weight * (initial_height - cart.pos.y)
-                
-                if not change_direction and cart.kinetic_energy < 0:
-                    change_direction = True
-                    cart.direction *= -1
-                    temp = p2
-                    p2 = p1
-                    p1 = temp
-                
-                if not cat.in_cart:
-                    # kinematics here
-                    if not cat.grounded:
-                        cat.pos += cat.velocity * dt * dx
-                        cat.velocity -= g * vec(0, 1, 0) * dt
-                        
-                        is_intersect, above_points = path_intersect(cart_path, cat)
-                        
-                        if is_intersect:
-                            if DEBUG:
-                                print("cat hit ground")
-                            cat.grounded = True
-                        
-                elif ci < len(circle_parts) and circle_parts[ci]['start'] < i and i < circle_parts[ci]['end'] and not cat.grounded:
-                    # centripetal force calculation here
-                    centrifugal_force = cat.weight * velocity ** 2 / circle_parts[ci]['radius']
-                    gravity_normal = vec(0, 1, 0)
-                    center_to_cat = norm(cat.pos - circle_parts[ci]['center'])
-                    centripetal_force = cat.weight * g * abs(dot(gravity_normal, center_to_cat))
                     
-                    if circle_parts[ci]['type'] == 'HILL' and cart.pos.x < circle_parts[ci]['center'].x:
-                        if centrifugal_force > centripetal_force:
-                            # use timeless distance equation to check if max y value is enough to "jump" out of the cart
-                            # vf^2 = vi^2 + 2ad where vf = 0, 0 = vi^2 - 2gd, 2gd = vi^2, d = vi^2/(2g)
-                            # must multiply by "dx" because in this program, dx is used to adjust the scale of values in each loop
-                            # NOTE: cart also moves upward so find the point the cat is above at that time and thats the y position of the cart
-                            exit_velocity = velocity * vec(cos(cat.angle), sin(cat.angle), 0)
-                            distance_upward = ((exit_velocity.y * dx)**2)/(2 * g)
-                            future_x = cat.pos.x + (exit_velocity.y/g) * exit_velocity.x
-                                
-                            # if no abovepoint, it means the cat went REALLY REALLY far
-                            if distance_upward < (cart.height + cat.height/2):
-                                if not cat.has_said_feeling:
-                                    if DEBUG:
-                                        print("cat feel light")
-                                    cat.has_said_feeling = True
-                            else:
-                                cat.in_cart = False
-                                if DEBUG:
-                                    print("cat go flying")
-                                cat.velocity = exit_velocity
-                    elif circle_parts[ci]['type'] == 'LOOP' and p1.x > p2.x and p1.y < p2.y:
-                        if centrifugal_force < centripetal_force:
-                            exit_velocity = velocity * vec(cos(cat.angle), 0, 0)
-                            
-                            cat.in_cart = False
-                            cat.velocity = exit_velocity
-                            
-                            if DEBUG and not cat.has_said_feeling:
-                                cat.has_said_feeling = True
-                                print("cat fall off loop")
-                        else:
-                            if DEBUG and not cat.has_said_feeling:
-                                cat.has_said_feeling = True
-                                print("cat hold onto loop for dear life")
-
-            cart.pos = p2
-            if cat.in_cart:
-                update_cat(cart, cat, p1, p2)
-                
-            i += cart.direction
-            if rs:
-                break
-
-        if running:
-            path_completed = True
-        
-            while not cat.in_cart and not cat.grounded:
-                rate(1/dt)
-                
-                cat.pos += cat.velocity * dt * dx
-                cat.velocity -= g * vec(0, 1, 0) * dt
-                
-                if cat.pos.y < 0:
+                i += cart.direction
+                if rs:
                     break
-            cat.visible = False
+    
+            if running:
+                path_completed = True
             
+                while not cat.in_cart and not cat.grounded:
+                    rate(1/dt)
+                    
+                    cat.pos += cat.velocity * dt * dx
+                    cat.velocity -= g * vec(0, 1, 0) * dt
+                    
+                    if cat.pos.y < 0:
+                        break
+                cat.visible = False
+                
+                if DEBUG:
+                    print("cat exploded")
+                reset_scene()
+        except:
             if DEBUG:
-                print("cat exploded")
+                print("Error: resetting scene")
             reset_scene()
-
     else:
         rate(1/dt)
             

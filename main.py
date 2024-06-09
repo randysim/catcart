@@ -137,7 +137,7 @@ def generate_left_curve(initial_height, starting_pos=None):
     
     
 def generate_line(p1, p2, starting_pos=None):
-    num_points = int((p2.x-p1.x)/point_every) + 1
+    num_points = int(((p2.x-p1.x)/point_every) * 0.75) + 1
     slope = (p2 - p1)/(num_points - 1)
     ps = [p1]
     
@@ -172,7 +172,7 @@ def generate_dip(curvature, height, starting_pos=None):
 
 def generate_loop(radius, starting_pos=None):
     t = -pi/2
-    num_points = (pi * radius)/point_every + 1
+    num_points = int((4 * radius)/point_every) + 1
     dt = (2 * pi) / (num_points - 1)
     
     c_points = []

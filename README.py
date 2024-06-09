@@ -41,6 +41,7 @@ index = int(len(cat_pics) * random())
     
 cat_pic = box(pos=vec(0, 0, 0), size=vec(1, 1, 0.001), texture=cat_pics[index], shininess=0)
 desc = text(text="click canvas for a different cat pic", height=0.1, pos=vec(-1, 0.6, 0), color=color.black, shininess=0)
+instruction = text(text="click \"Edit this program\" for README", height=0.1, pos=vec(-1.1,-0.7, 0), color=color.black, shininess=0)
 
 while True:
     scene.waitfor("click")

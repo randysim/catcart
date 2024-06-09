@@ -392,7 +392,7 @@ def generate_cat():
 
 # USER INPUT ==========================
 def reset_scene(update_settings=False):
-    global reset, cart, cat, path_completed, path_curve, cart_path, circle_parts, path_components, running, toggle_button, settings, component_menu, component_types, selected_component, add_component_button, view_amount, view_text, view_slider, follow_cat, follow_cat_button
+    global reset, cart, cat, path_completed, path_curve, cart_path, circle_parts, path_components, running, toggle_button, settings, component_menu, component_types, selected_component, add_component_button, view_amount, view_text, view_slider, follow_cart, follow_cart_button
     cart.visible = False
     cat.visible = False
     path_curve.visible = False

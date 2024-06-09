@@ -72,7 +72,7 @@ def generate_hill(percent_semi_circle, radius, hill_height, starting_pos=None, y
     c2_start = x_coord+circle_range # start of drawing the 2nd curve
     
     hill_width = (radius+circle_range)-c1_start
-    num_points = int(1.5 * hill_width/point_every)
+    num_points = int(hill_width/point_every)
     offset = vec(0, 0, 0)
     
     circle_top_start = None

@@ -12,11 +12,7 @@ point_every = 0.05
 
 # limit angle between 0 and 2 PI
 def simplify_angle(angle):
-    while angle < 0:
-        angle += 2 * pi
-    while angle > 2 * pi:
-        angle -= 2 * pi
-    return angle
+    return angle % (2 * pi)
 
 def get_angle(p1, p2):
     dir_vector = p2-p1
